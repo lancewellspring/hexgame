@@ -115,14 +115,14 @@ class HexCore
     cellData = (cell._save() for cell in @cells)
     return [@currentStep, @limitStep, @limitMoves, cellData]
 
-  _load: (state) ->
+  _load: (protocol, state) ->
     [@currentStep, @limitStep, @limitMoves, cellData] = state
     for [cell, data] in _.zip(@cells, cellData)
       cell._load(data)
     console.log('loaded state')
 
   #syncs actions of players to eachother (and self)
-  _sync: (steps, actions) ->
+  _sync: (protocol, steps, actions) ->
     if @limitStep > @currentStep
       @update(@limitStep - @currentStep)
     if @limitActions.length > 0

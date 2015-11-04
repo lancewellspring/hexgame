@@ -3,25 +3,23 @@ class HexProtocol
   @CHANNEL = 'hex'
 
   constructor: (@handler, @send) ->
+    @actions = []
 
   # parse received data and call the appropriate handler function
   receive: (type, data) ->
     switch type
       when 'load'
         [state] = data
-        @handler._load(state)
+        @handler._load(this, state)
       when 'sync'
         [steps, actions] = data
-        @handler._sync(steps, actions)
-      when 'move'
-        [gameData] = data
-        @handler._move(gameData)
+        @handler._sync(this, steps, actions)
       when 'start'
-        [playerName] = data
-        @handler._start(playerName)
+        [@playerName] = data
+        @handler._start(this, @playerName)
       when 'attack'
         [gameData] = data
-        @handler._attack(gameData)
+        @handler._attack(this, gameData)
       else
         console.log("ignored command [#{type}]")
 
@@ -30,17 +28,14 @@ class HexProtocol
     @send('load', [state])
 
   # sever -> client: incremental game updates
-  sync: (steps, actions) ->
-    @send('sync', [steps, actions])
+  sync: (steps) ->
+    @send('sync', [steps, @actions])
+    @actions = []
 
-  # client -> server: attempt player move
-  move: (gameData) ->
-    @send('move', [gameData])
-    
   # client -> server: attempt player start
-  start: (gameData) ->
-    @send('start', [gameData])
-    
+  start: (@playerName) ->
+    @send('start', [@playerName])
+
   # client -> server: attempt player attack
   attack: (gameData) ->
     @send('attack', [gameData])
