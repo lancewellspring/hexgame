@@ -37,29 +37,40 @@ class ServerLogic
     console.log("#{playerName} has joined the game!")
     #give hex to player
     hex = @core.grid.getRandomStartingHex()
-    @core.players[playerName] = new Player(playerName)
+    @core.players[playerName] = new Player(playerName, protocol)
     action = ['take', playerName, hex.x, hex.y]
     @actions.push(action)
     protocol.actions.push(action)
     #show adjacent hexs to player
     hexs = @core.grid.getAdjacentHexs(hex)
-    console.log("hex: " + hex.x + " " + hex.y)
     for h in hexs
-      action = ['show', playerName, h.x, h.y]
+      action = ['show', playerName, h.x, h.y, h.color]
       @actions.push(action)
       protocol.actions.push(action)
 
   _attack: (protocol, gameData) ->
     playerName = gameData[0]
+    player = @core.players[playerName]
     hex = @core.grid.hexs[gameData[1]][gameData[2]]
     action = ['take', playerName, hex.x, hex.y]
     @actions.push(action)
     protocol.actions.push(action)
+    #show appropriate players the hex change
+    for name, p of @core.players
+      if name == playerName
+        continue
+      if hex in p.hexs
+        p.protocol.actions.push(['show', playerName, hex.x, hex.y, player.color])
+      else
+        for h in p.hexs
+          if hex in @core.grid.getAdjacentHexs(h)
+            p.protocol.actions.push(['show', playerName, hex.x, hex.y, player.color])
+        
     #show adjacent hexs to player
     hexs = @core.grid.getAdjacentHexs(hex)
     for h in hexs
       #TODO: this often sends 'show' for hexs that the player can actually already see, improve performance?
-      action = ['show', playerName, h.x, h.y]
+      action = ['show', playerName, h.x, h.y, h.color]
       @actions.push(action)
       protocol.actions.push(action)
     if hex.owner?

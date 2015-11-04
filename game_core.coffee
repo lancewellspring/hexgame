@@ -69,7 +69,7 @@ class Grid
 
 class Player
 
-  constructor: (@name) ->
+  constructor: (@name, @protocol) ->
     @color = Math.floor(Math.random() * (1 << 24)) | 0x282828
     @hexs = []
 
@@ -129,18 +129,24 @@ class HexCore
       console.log("#{@limitActions.length} moves in last #{@currentStep} steps")
     for action in @limitActions
       console.log(action)
-      [type, playerName, x, y] = action
+      [type, playerName, x, y, color] = action
       hex = @grid.hexs[x][y]
+      player = @players[playerName]
       switch type
         when 'take'
-          player = @players[playerName]
           if hex.owner != null
             hex.owner.removeHex(hex)
           player.addHex(hex)
           hex.setOwner(player)
           @cells.push(hex)
         when 'show'
+          if hex.owner != null
+            hex.owner.removeHex(hex)
+          if player != null and hex.owner != player
+            player.addHex(hex)
+            hex.setOwner(player)
           if not (hex in @cells)
+            hex.color = color
             @cells.push(hex)
         when 'hide'
           #TODO: figure out a way to notify the renderer to remove this hex from being displayed
