@@ -20,6 +20,9 @@ class HexProtocol
       when 'attack'
         [gameData] = data
         @handler._attack(this, gameData)
+      when 'chat'
+        [message] = data
+        @handler._chat(this, message)
       else
         console.log("ignored command [#{type}]")
 
@@ -30,7 +33,7 @@ class HexProtocol
   # sever -> client: incremental game updates
   sync: (steps) ->
     @send('sync', [steps, @actions])
-    @actions =  []
+    @actions = []
 
   # client -> server: attempt player start
   start: (@playerName) ->
@@ -39,6 +42,10 @@ class HexProtocol
   # client -> server: attempt player attack
   attack: (gameData) ->
     @send('attack', [gameData])
+
+  # bidirectional: broadcast a chat message
+  chat: (message) ->
+    @send('chat', [message])
 
 # public interface
 (exports ? window).HexProtocol = HexProtocol

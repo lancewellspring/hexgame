@@ -157,6 +157,12 @@ class HexCore
     @limitStep = steps
     @limitActions = actions
 
+  # called whenever a chat message is received
+  _chat: (protocol, message) ->
+    # TODO: this should be organized better
+    if @_print?
+      @_print(message)
+
 # public interface
 (exports ? window).HexCore = HexCore
 (exports ? window).Player = Player

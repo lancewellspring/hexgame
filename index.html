@@ -4,6 +4,7 @@
     <title>HexGame</title>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, user-scalable=0">
+    <link href="https://fonts.googleapis.com/css?family=Amarante" rel="stylesheet" type="text/css">
     <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.8.3/underscore-min.js"></script>
     <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.0.0-alpha1/jquery.min.js"></script>
     <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js/3.0.8/pixi.min.js"></script>
@@ -13,36 +14,63 @@
     <script type="text/javascript" src="game_renderer.js"></script>
     <style>
       * { margin: 0; padding: 0; box-sizing: border-box; }
-      html, body { width: 100%; height: 100%; }
-      canvas { display: block; }
+      html, body { width: 100%; height: 100%; font-family: 'Amarante', Calibri, Candara, Segoe, 'Segoe UI', Optima, Arial, sans-serif; color: #ddd; }
+      .max { width: 100%; height: 100%; }
+      .msg { border-bottom: 1px solid #222; padding: 4px; }
+      #login { background: radial-gradient(#333, #000); display: flex; justify-content: center; align-items: center; }
+      #play { display: none; }
+      #canvas { position: absolute; top: 0; left: 200px; display: block; width: calc(100% - 200px); height: 100%; }
+      #chat { position: absolute; top: 0; left: 0; width: 200px; height: 100%; background-color: #000; }
+      #messages { width: 100%; height: calc(100% - 32px); position: absolute; bottom: 32px; left: 0; overflow-x: hidden; overflow-y: scroll; }
+      #chatcontrols { width: 100%; height: 32px; position: absolute; bottom: 0; left: 0;}
     </style>
   </head>
   <body>
-    <input id="textbox" type="text" name="name" ></input>
-    <button id="btnStart" onclick="onStartClick();">Start</button>
-    <canvas id="canvas" style="display:none"></canvas>
+    <div id="login" class="max">
+      <div>
+        <p style="font-weight: bold; text-align: center;">
+          What's your name?
+        </p>
+        <input id="textbox" type="text">
+        <input id="btnStart" type="button" value="Start">
+      </div>
+    </div>
+    <div id="play" class="max">
+      <div id="chat">
+        <div id="messages"></div>
+        <div id="chatcontrols">
+          <input id="textbox2" type="text" style="width: 100%;">
+        </div>
+      </div>
+      <canvas id="canvas"></canvas>
+    </div>
     <script>
       $(document).ready(function() {
-        
+        $("#btnStart").click(onStartClick);
+        $("#textbox").keyup(function(e) {
+          if(e.keyCode == 13) {
+            onStartClick();
+          }
+        });
       });
-      
-      function onStartClick(e)
-      {
-        if($("#textbox").val().length <= 0)
-        {
+      function onStartClick() {
+        if($("#textbox").val().length <= 0) {
           alert("must enter a name!");
           return;
         }
-        $("#textbox").css("display", "none");
-        $("#btnStart").css("display", "none");
-        $("#canvas").css("display", "block");
-        
+        $("#login").css("display", "none");
+        $("#play").css("display", "block");
+
         var socket = io();
         socket.emit('message', 'hello from index.html!');
         socket.on('message', function(data) {
           console.log('server says: [' + data + ']');
         });
         var core = new HexCore();
+        // TODO: hack - this is how the core knows how to display chat messages
+        core._print = function(message) {
+          $('#messages').append('<p class="msg">' + message + '</p>');
+        }
         var protocol = new HexProtocol(core, function(type, data) {
           socket.emit(HexProtocol.CHANNEL, [type, data]);
         });
@@ -56,6 +84,13 @@
         $(window).on('resize', updateSize);
         updateSize();
         renderer.animate();
+        // send chat messages to the server
+        $("#textbox2").keyup(function(e) {
+          if(e.keyCode == 13) {
+            protocol.chat($("#textbox2").val());
+            $("#textbox2").val('');
+          }
+        });
       }
     </script>
   </body>

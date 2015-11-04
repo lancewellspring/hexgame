@@ -65,7 +65,7 @@ class ServerLogic
         for h in p.hexs
           if hex in @core.grid.getAdjacentHexs(h)
             p.protocol.actions.push(['show', playerName, hex.x, hex.y, player.color])
-        
+
     #show adjacent hexs to player
     hexs = @core.grid.getAdjacentHexs(hex)
     for h in hexs
@@ -76,6 +76,17 @@ class ServerLogic
     if hex.owner?
       #TODO: need to send 'hide' action to hex.owner for the hex's he lost sight of
       return 0
+
+  _chat: (protocol, message) ->
+    # ignore spoofed messages
+    if not protocol.playerName?
+      return
+    # message formatting
+    console.log("[chat] #{protocol.playerName}: #{message}")
+    formatted = "<b>#{protocol.playerName}:</b> #{message}"
+    # don't queue it with the other actions, relay it to everyone immediately
+    for client in @clients
+      client.chat(formatted)
 
 # essentials
 express = require('express')
