@@ -30,7 +30,7 @@ class HexProtocol
   # sever -> client: incremental game updates
   sync: (steps) ->
     @send('sync', [steps, @actions])
-    @actions = []
+    @actions =  []
 
   # client -> server: attempt player start
   start: (@playerName) ->
