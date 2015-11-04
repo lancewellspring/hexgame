@@ -36,10 +36,10 @@ class HexRenderer
       backgroundColor: 0x000000
     @renderer = new PIXI.autoDetectRenderer(@w, @h, options)
     @stage = new PIXI.Container()
-    
+
     @protocol.start([@playerName])
     @firstSprite = true
-    
+
     graphics = new PIXI.Graphics()
     graphics.lineStyle(4, 0xffffff, 1)
     graphics.beginFill(0x404040)
@@ -77,15 +77,15 @@ class HexRenderer
       @update(steps)
     # draw, finally
     @renderer.render(@stage)
-    
+
   #maps grid x/y to window x/y
-  gridToWindow: (cellx, celly):
+  gridToWindow: (cellx, celly) ->
     x = @windowx + (cellx - @gridx) * @texture.width * 3 / 4
     y = @windowy + (celly - @gridy) * @texture.height
     if(Math.abs(x) % 2 == 1)
       y -= @texture.height / 2
-    return x, y
-    
+    return [x, y]
+
   hexSpriteClick: (e) ->
     @protocol.attack([@playerName, e.x, e.y])
 
@@ -100,7 +100,7 @@ class HexRenderer
           @gridy = cell.y
           firstSprite = false
         #add new cell to sprite list
-        [x, y] = gridToWindow(cell.x, cell.y)   
+        [x, y] = gridToWindow(cell.x, cell.y)
         @hexSprites[key] = new HexSprite(cell, @hexSpriteClick, @texture, x, y)
       @hexSprites[key].update(steps)
 

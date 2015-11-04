@@ -18,7 +18,7 @@ class ServerLogic
 
   _move: (gameData) ->
     @moves.push(gameData)
-    
+
   _start: (playerName) ->
     #give hex to player
     hex = @core.grid.getRandomStartingHex()
@@ -28,7 +28,7 @@ class ServerLogic
     hexs = @core.grid.getAdjacentHexs(hex)
     for h in hexs
       @actions.push(['show', playerName, h.x, h.y])
-    
+
   _attack: (gameData) ->
     @actions.push(['take'] + gameData)
     #show adjacent hexs to player
@@ -38,8 +38,9 @@ class ServerLogic
     for h in hexs
       #TODO: this often sends 'show' for hexs that the player can actually already see, improve performance?
       @actions.push(['show', playerName, h.x, h.y])
-    if hex.owner != null
+    if hex.owner?
       #TODO: need to send 'hide' action to hex.owner for the hex's he lost sight of
+      return 0
 
 # essentials
 express = require('express')

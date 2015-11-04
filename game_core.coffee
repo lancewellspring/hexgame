@@ -9,7 +9,7 @@ class HexCell
 
   update: (steps) ->
     #@angle += @speed * steps
-    
+
   setOwner: (player) ->
     @owner = player
     @color = player.color
@@ -32,7 +32,7 @@ class Grid
       @hexs.push([])
       for j in [0...@height]
         @hexs[i].push(new HexCell(i, j))
-        
+
   getAdjacentHexs: (hex) ->
     neighbors = []
     indices = [0,-1, 0,1, -1,0, 1,0]
@@ -47,43 +47,43 @@ class Grid
       if x >= 0 and x < @width and y >= 0 and y < @height
         neighbors.push(@hexs[x][y])
     return neighbors
-    
+
   getAdjacentPlayers: (hex) ->
     players = []
     for n in @getAdjacentHexs(hex)
-      players.push(n.owner);
+      players.push(n.owner)
     return players;
-        
+
   hasAdjacentPlayers: (hex) ->
     players = getAdjacentPlayers(hex)
     for player in players
       if player != null and player != hex.owner
-          return true
+        return true
     return false
 
   getRandomStartingHex: () ->
     hex = null
     while (hex == null or @hasAdjacentPlayers(hex))
-        hex = @hexs[Math.floor(Math.random() * @width)][Math.floor(Math.random() * @height)]
+      hex = @hexs[Math.floor(Math.random() * @width)][Math.floor(Math.random() * @height)]
     return hex
-				
+
 class Player
 
   constructor: (@name) ->
     @color = Math.floor(Math.random() * (1 << 24)) | 0x282828
     @hexs = []
-    
+
   update: (steps) ->
     for hex in @hexs
       hex.update(steps)
-      
+
   addHex: (hex) ->
     @hexs.push(hex)
-    
+
   removeHex: (hex) ->
-    var index = @hexs.indexOf(hex);
+    index = @hexs.indexOf(hex)
     #TODO: assert index >= 0
-    this.hexs.splice(index, 1);
+    this.hexs.splice(index, 1)
 
 class HexCore
 
@@ -144,7 +144,7 @@ class HexCore
           #TODO: figure out a way to notify the renderer to remove this hex from being displayed
         else
           console.log("ignored action [#{type}]")
-      
+
     @currentStep = 0
     @limitStep = steps
     #TODO: Not sure I understand the purpose of @limitMoves.  Perhaps the same thing needs to be done for actions?
