@@ -1,14 +1,27 @@
 # the game server code
 class ServerLogic
 
-  constructor: (@core, send) ->
-    @protocol = new HexProtocol(this, send)
+  constructor: (@core) ->
+    @clients = []
     @actions = []
 
   update: (steps) ->
     @core._sync(steps, @actions)
-    @protocol.sync(steps, @actions)
+    for client in @clients
+      client.sync(steps, @actions)
     @actions = []
+
+  addClient: (socket) ->
+    send = (type, data) -> socket.emit(HexProtocol.CHANNEL, [type, data])
+    protocol = new HexProtocol(this, send)
+    @clients.push(protocol)
+    console.log("#{@clients.length} connections")
+    return protocol
+
+  removeClient: (protocol) ->
+    if protocol in @clients
+      @clients.splice(@clients.indexOf(protocol), 1)
+    console.log("#{@clients.length} connections")
 
   _load: (state) ->
     console.log('a naughty client just sent the `load` command')
@@ -49,15 +62,12 @@ app = express()
 server = require('http').Server(app)
 io = require('socket.io')(server)
 
-# networking helper
-send = (type, data) -> io.emit(HexProtocol.CHANNEL, [type, data])
-
 # the game
 HexCore = require('./public/game_core.js').HexCore
 Player = require('./public/game_core.js').Player
 HexProtocol = require('./public/game_protocol.js').HexProtocol
 core = new HexCore()
-serverLogic = new ServerLogic(core, send)
+serverLogic = new ServerLogic(core)
 
 # directory for static web content
 app.use(express.static('public'))
@@ -70,13 +80,13 @@ io.on('connection', (socket) ->
   socket.on('message', (data) ->
     console.log("client says: [#{data}]")
   )
+  # the really important stuff
+  protocol = serverLogic.addClient(socket)
+  socket.on(HexProtocol.CHANNEL, (data) -> protocol.receive(data[0], data[1]))
   socket.on('disconnect', (data) ->
     console.log('client disconnected!')
+    serverLogic.removeClient(protocol)
   )
-  # the really important stuff
-  sendPrivate = (type, data) -> socket.emit(HexProtocol.CHANNEL, [type, data])
-  socket.on(HexProtocol.CHANNEL, (data) -> serverLogic.protocol.receive(data[0], data[1]))
-  #new HexProtocol(null, sendPrivate).load(core._save()) #no longer want to send whole state to client
 )
 
 # start the server
