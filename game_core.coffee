@@ -128,6 +128,7 @@ class HexCore
     if @limitActions.length > 0
       console.log("#{@limitActions.length} moves in last #{@currentStep} steps")
     for action in @limitActions
+      console.log(action)
       [type, playerName, x, y] = action
       hex = @grid.hexs[x][y]
       switch type

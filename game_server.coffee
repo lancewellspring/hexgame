@@ -31,10 +31,10 @@ class ServerLogic
       @actions.push(['show', playerName, h.x, h.y])
 
   _attack: (gameData) ->
-    @actions.push(['take'] + gameData)
-    #show adjacent hexs to player
     playerName = gameData[0]
-    hex = @core.grid[gameData[1]][gameData[2]]
+    hex = @core.grid.hexs[gameData[1]][gameData[2]]
+    @actions.push(['take', playerName, hex.x, hex.y])
+    #show adjacent hexs to player
     hexs = @core.grid.getAdjacentHexs(hex)
     for h in hexs
       #TODO: this often sends 'show' for hexs that the player can actually already see, improve performance?
