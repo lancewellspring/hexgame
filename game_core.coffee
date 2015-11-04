@@ -9,7 +9,7 @@ class HexCell
 
   update: (steps) ->
     #@angle += @speed * steps
-    
+
   setOwner: (player) ->
     @owner = player
     @color = player.color
@@ -32,58 +32,58 @@ class Grid
       @hexs.push([])
       for j in [0...@height]
         @hexs[i].push(new HexCell(i, j))
-        
+
   getAdjacentHexs: (hex) ->
     neighbors = []
-    indices = [0,-1, 0,1, -1,0, 1,0]
-    if(hex.x % 2 == 0)
-      indices += [-1, 1, 1, 1]
+    indices = [[0, -1], [0, 1], [-1, 0], [1, 0]]
+    if hex.y % 2 == 0
+      indices.push([-1, 1], [-1, -1])
     else
-      indices += [1, -1, -1, -1]
-    for i in [0 ... indices.length] by 2
-      [x, y] = a[i .. i+1]
+      indices.push([1, 1], [1, -1])
+    for i in indices
+      [x, y] = i
       x += hex.x
       y += hex.y
       if x >= 0 and x < @width and y >= 0 and y < @height
         neighbors.push(@hexs[x][y])
     return neighbors
-    
+
   getAdjacentPlayers: (hex) ->
     players = []
     for n in @getAdjacentHexs(hex)
-      players.push(n.owner);
+      players.push(n.owner)
     return players;
-        
+
   hasAdjacentPlayers: (hex) ->
-    players = getAdjacentPlayers(hex)
+    players = @getAdjacentPlayers(hex)
     for player in players
       if player != null and player != hex.owner
-          return true
+        return true
     return false
 
   getRandomStartingHex: () ->
     hex = null
     while (hex == null or @hasAdjacentPlayers(hex))
-        hex = @hexs[Math.floor(Math.random() * @width)][Math.floor(Math.random() * @height)]
+      hex = @hexs[Math.floor(Math.random() * @width)][Math.floor(Math.random() * @height)]
     return hex
-				
+
 class Player
 
   constructor: (@name) ->
     @color = Math.floor(Math.random() * (1 << 24)) | 0x282828
     @hexs = []
-    
+
   update: (steps) ->
     for hex in @hexs
       hex.update(steps)
-      
+
   addHex: (hex) ->
     @hexs.push(hex)
-    
+
   removeHex: (hex) ->
-    var index = @hexs.indexOf(hex);
+    index = @hexs.indexOf(hex)
     #TODO: assert index >= 0
-    this.hexs.splice(index, 1);
+    this.hexs.splice(index, 1)
 
 class HexCore
 
@@ -92,8 +92,9 @@ class HexCore
 
   constructor: () ->
     @grid = new Grid()
+    @grid.getAdjacentHexs(@grid.hexs[2][3])
     @currentStep = @limitStep = 0
-    @limitMoves = []
+    @limitActions = []
     @cells = []#(new HexCell(i) for i in [0...3])
     @players = {}
 
@@ -124,9 +125,9 @@ class HexCore
   _sync: (steps, actions) ->
     if @limitStep > @currentStep
       @update(@limitStep - @currentStep)
-    if @limitMoves.length > 0
-      console.log("#{@limitMoves.length} moves in last #{@currentStep} steps")
-    for action in actions
+    if @limitActions.length > 0
+      console.log("#{@limitActions.length} moves in last #{@currentStep} steps")
+    for action in @limitActions
       [type, playerName, x, y] = action
       hex = @grid.hexs[x][y]
       switch type
@@ -138,17 +139,17 @@ class HexCore
           hex.setOwner(player)
           @cells.push(hex)
         when 'show'
-          if not hex in @cells
+          if not (hex in @cells)
             @cells.push(hex)
         when 'hide'
           #TODO: figure out a way to notify the renderer to remove this hex from being displayed
         else
           console.log("ignored action [#{type}]")
-      
+
     @currentStep = 0
     @limitStep = steps
-    #TODO: Not sure I understand the purpose of @limitMoves.  Perhaps the same thing needs to be done for actions?
-    @limitMoves = moves
+    @limitActions = actions
 
 # public interface
 (exports ? window).HexCore = HexCore
+(exports ? window).Player = Player

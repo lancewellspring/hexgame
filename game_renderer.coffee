@@ -1,16 +1,17 @@
 class HexSprite
 
-  constructor: (@cell, click, texture, x, y) ->
+  constructor: (@cell, texture, x, y) ->
     @sprite = new PIXI.Sprite(texture)
     @sprite.pivot.set(@sprite.width / 2, @sprite.height / 2)
     @sprite.position.set(x, y)
     @sprite.interactive = true
-    @sprite.click = @sprite.tap = (e) =>
-      #color = Math.floor(Math.random() * (1 << 24)) | 0x282828
-      #@protocol.move(HexCore.setColor(@cell.index, color))
-      #@protocol.move(HexCore.setSpeed(@cell.index, @cell.speed * -1))
-      #Need to figure out the mapping of screen location to grid location
-      click(e)
+    @sprite.gridx = @cell.x
+    @sprite.gridy = @cell.y
+    # @sprite.click = @sprite.tap = (e) =>
+      # #color = Math.floor(Math.random() * (1 << 24)) | 0x282828
+      # #@protocol.move(HexCore.setColor(@cell.index, color))
+      # #@protocol.move(HexCore.setSpeed(@cell.index, @cell.speed * -1))
+      # @click(e)
 
   update: (steps) ->
     #@sprite.rotation = @cell.angle * 1e-3
@@ -24,6 +25,7 @@ class HexRenderer
   ]
 
   constructor: (@core, @protocol, @playerName, canvas) ->
+    #[@w, @h] = [window.innerWidth, window.innerHeight]
     [@w, @h] = [canvas.width, canvas.height]
     #variables used to map grid x/y to window x/y
     @gridx = @gridy = 0
@@ -36,10 +38,11 @@ class HexRenderer
       backgroundColor: 0x000000
     @renderer = new PIXI.autoDetectRenderer(@w, @h, options)
     @stage = new PIXI.Container()
-    
-    @protocol.start([@playerName])
+
+    @protocol.start(@playerName)
+    @core.players[@playerName] = new Player(@playerName)
     @firstSprite = true
-    
+
     graphics = new PIXI.Graphics()
     graphics.lineStyle(4, 0xffffff, 1)
     graphics.beginFill(0x404040)
@@ -77,31 +80,42 @@ class HexRenderer
       @update(steps)
     # draw, finally
     @renderer.render(@stage)
-    
+
   #maps grid x/y to window x/y
-  gridToWindow: (cellx, celly):
-    x = @windowx + (cellx - @gridx) * @texture.width * 3 / 4
-    y = @windowy + (celly - @gridy) * @texture.height
-    if(Math.abs(x) % 2 == 1)
-      y -= @texture.height / 2
-    return x, y
+  gridToWindow: (cellx, celly) ->
+    x = @windowx + (cellx - @gridx) * @texture.width
+    y = @windowy + (celly - @gridy) * @texture.height * 3 / 4
+    if Math.abs(celly) % 2 == 1
+      x += @texture.width / 2
+    return [x, y]
     
+  #TODO: incomplete, not sure if needed
+  windowToGrid: (winx, winy) ->
+    x = (winx - @windowx) / @texture.width
+    y = (winy - @windowy) / @texture.height * 4 / 3
+
   hexSpriteClick: (e) ->
-    @protocol.attack([@playerName, e.x, e.y])
+    @protocol.attack([@playerName, e.target.gridx, e.target.gridy])
 
   update: (steps) ->
+    #TODO: I'm not a fan of the way renderer gets cells from core, need to think about doing it differently (a way that would also work for core notifying renderer when to hide cells as well)
     #loop through cores cells instead, and add any new ones to sprite list
     for cell in @core.cells
       key = "#{cell.x}#{cell.y}"
-      if not key of @hexSprites
-        if firstSprite and cell.owner != null and cell.owner.name == @playerName
+      if not (key of @hexSprites)
+        if @firstSprite and cell.owner != null and cell.owner.name == @playerName
           #map grid location to window location
+          #TODO: this should be placing the first hex in the middle of the screen, but its not working
           @gridx = cell.x
           @gridy = cell.y
+          console.log("x y: " + @gridx + " " + @gridy)
           firstSprite = false
         #add new cell to sprite list
-        [x, y] = gridToWindow(cell.x, cell.y)   
-        @hexSprites[key] = new HexSprite(cell, @hexSpriteClick, @texture, x, y)
+        [x, y] = @gridToWindow(cell.x, cell.y)
+        @hexSprites[key] = new HexSprite(cell, @texture, x, y)
+        #TODO: Something wrong with the scope when calling hexspriteclick
+        @hexSprites[key].sprite.click = (e) => @hexSpriteClick(e)
+        @stage.addChild(@hexSprites[key].sprite)
       @hexSprites[key].update(steps)
 
 # public interface

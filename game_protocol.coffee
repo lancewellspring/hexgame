@@ -17,7 +17,7 @@ class HexProtocol
         [gameData] = data
         @handler._move(gameData)
       when 'start'
-        playerName = data
+        [playerName] = data
         @handler._start(playerName)
       when 'attack'
         [gameData] = data

@@ -18,7 +18,7 @@ class ServerLogic
 
   _move: (gameData) ->
     @moves.push(gameData)
-    
+
   _start: (playerName) ->
     #give hex to player
     hex = @core.grid.getRandomStartingHex()
@@ -26,9 +26,10 @@ class ServerLogic
     @actions.push(['take', playerName, hex.x, hex.y])
     #show adjacent hexs to player
     hexs = @core.grid.getAdjacentHexs(hex)
+    console.log("hex: " + hex.x + " " + hex.y)
     for h in hexs
       @actions.push(['show', playerName, h.x, h.y])
-    
+
   _attack: (gameData) ->
     @actions.push(['take'] + gameData)
     #show adjacent hexs to player
@@ -38,8 +39,9 @@ class ServerLogic
     for h in hexs
       #TODO: this often sends 'show' for hexs that the player can actually already see, improve performance?
       @actions.push(['show', playerName, h.x, h.y])
-    if hex.owner != null
+    if hex.owner?
       #TODO: need to send 'hide' action to hex.owner for the hex's he lost sight of
+      return 0
 
 # essentials
 express = require('express')
@@ -52,6 +54,7 @@ send = (type, data) -> io.emit(HexProtocol.CHANNEL, [type, data])
 
 # the game
 HexCore = require('./public/game_core.js').HexCore
+Player = require('./public/game_core.js').Player
 HexProtocol = require('./public/game_protocol.js').HexProtocol
 core = new HexCore()
 serverLogic = new ServerLogic(core, send)

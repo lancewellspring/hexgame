@@ -13,13 +13,12 @@
     <script type="text/javascript" src="game_renderer.js"></script>
     <style>
       * { margin: 0; padding: 0; box-sizing: border-box; }
-      html, body, canvas { width: 100%; height: 100%; }
+      html, body { width: 100%; height: 100%; }
       canvas { display: block; }
     </style>
   </head>
   <body>
-    <text
-    <input id="textbox" type="text" name="name" />
+    <input id="textbox" type="text" name="name" ></input>
     <button id="btnStart" onclick="onStartClick();">Start</button>
     <canvas id="canvas" style="display:none"></canvas>
     <script>
@@ -29,6 +28,11 @@
       
       function onStartClick(e)
       {
+        if($("#textbox").val().length <= 0)
+        {
+          alert("must enter a name!");
+          return;
+        }
         $("#textbox").css("display", "none");
         $("#btnStart").css("display", "none");
         $("#canvas").css("display", "block");
