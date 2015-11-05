@@ -71,13 +71,14 @@
       </div>
     </div>
     <script>
+      var updateSize;
       var sideBarVisible = false;
       function toggleSideBar(show) {
         sideBarVisible = show;
         if(show) {
-          $("#div_content").animate({ width: '208px' }, 100);
+          $("#div_content").animate({ width: '208px' }, 100, updateSize);
         } else {
-          $("#div_content").animate({ width: '0px' }, 100);
+          $("#div_content").animate({ width: '0px' }, 100, updateSize);
         }
       }
       function selectSideContent(button, content) {
@@ -150,8 +151,8 @@
           protocol.receive(data[0], data[1]);
         });
         //pass events to renderer
-        var updateSize = function() {
-          renderer.resize(window.innerWidth, window.innerHeight);
+        updateSize = function() {
+          renderer.resize($("#canvas").width(), $("#canvas").height());
         };
         var onMouseDown = function(e){
           renderer.onMouseDown(e);
