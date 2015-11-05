@@ -17,13 +17,19 @@
       * { margin: 0; padding: 0; box-sizing: border-box; }
       html, body { width: 100%; height: 100%; font-family: 'Amarante', Calibri, Candara, Segoe, 'Segoe UI', Optima, Arial, sans-serif; color: #ddd; }
       .max { width: 100%; height: 100%; }
-      .msg { border-bottom: 1px solid #222; padding: 4px; }
+      .msg { border-bottom: 1px dotted #333; padding: 4px; }
       #login { background: radial-gradient(#333, #000); display: flex; justify-content: center; align-items: center; }
       #play { display: none; }
-      #canvas { position: absolute; top: 0; left: 200px; display: block; width: calc(100% - 200px); height: 100%; }
+      #canvas { display: block; background-color: #000; }
       #chat { position: absolute; top: 0; left: 0; width: 200px; height: 100%; background-color: #000; }
-      #messages { width: 100%; height: calc(100% - 32px); position: absolute; bottom: 32px; left: 0; overflow-x: hidden; overflow-y: scroll; }
-      #chatcontrols { width: 100%; height: 32px; position: absolute; bottom: 0; left: 0;}
+      #messages { width: 100%; height: calc(100% - 24px); overflow-x: hidden; overflow-y: scroll; }
+      #chatcontrols { width: 100%; height: 24px; }
+      #div_game { width: auto; height: 100%; overflow: hidden; background-color: #400; }
+      #div_content { width: 0px; height: 100%; overflow: hidden; float: right; background-color: #222; }
+      #div_menu { width: 48px; height: 100%; float: right; text-align: center; background-color: #000; -webkit-user-select: none; }
+      .content { width: 208px; height: 100%; }
+      .menu_item { width: 100%; height: 48px; text-shadow: 0 0 8px #000; font-size: 32px; }
+      .menu_item_selected { background-color: #222; }
     </style>
   </head>
   <body>
@@ -37,25 +43,87 @@
       </div>
     </div>
     <div id="play" class="max">
-      <div id="chat">
-        <div id="messages">
-          <p class="msg" style="text-align: center; font-size: 2em;">
-            <i class="fa fa-comments"></i>
-          </p>
+      <div id="div_menu">
+        <div id="menu_item_chat" class="menu_item"><i class="fa fa-comments"></i></div>
+        <div id="menu_item_settings" class="menu_item"><i class="fa fa-gear"></i></div>
+        <div id="menu_item_about" class="menu_item"><i class="fa fa-question"></i></div>
+      </div>
+      <div id="div_content">
+        <div id="content_chat" class="content" style="display: none;">
+          <div id="messages">
+            <p class="msg" style="text-align: center; font-style: italic;">
+              Welcome to HexGame!
+            </p>
+          </div>
+          <div id="chatcontrols">
+            <input id="textbox2" type="text" class="max">
+          </div>
         </div>
-        <div id="chatcontrols">
-          <input id="textbox2" type="text" style="width: 100%;">
+        <div id="content_settings" class="content" style="display: none;">
+          settings
+        </div>
+        <div id="content_about" class="content" style="display: none;">
+          about
         </div>
       </div>
-      <canvas id="canvas"></canvas>
+      <div id="div_game">
+        <canvas id="canvas" class="max"></canvas>
+      </div>
     </div>
     <script>
+      var sideBarVisible = false;
+      function toggleSideBar(show) {
+        sideBarVisible = show;
+        if(show) {
+          $("#div_content").animate({ width: '208px' }, 100);
+        } else {
+          $("#div_content").animate({ width: '0px' }, 100);
+        }
+      }
+      function selectSideContent(button, content) {
+        var cls = 'menu_item_selected';
+        var deselect = button.hasClass(cls);
+        if(deselect) {
+          toggleSideBar(false);
+        }
+        $("#content_chat").hide(0);
+        $("#content_settings").hide(0);
+        $("#content_about").hide(0);
+        content.show(0);
+        $("#menu_item_chat").removeClass(cls);
+        $("#menu_item_settings").removeClass(cls);
+        $("#menu_item_about").removeClass(cls);
+        if(!deselect) {
+          button.addClass(cls);
+          if(!sideBarVisible) {
+            toggleSideBar(true);
+          }
+        }
+      }
+      function addChatMessage(message) {
+        var messages = $('#messages');
+        var maxScroll = messages[0].scrollHeight - messages.height();
+        var autoScroll = maxScroll <= messages[0].scrollTop;
+        $('#messages').append('<p class="msg">' + message + '</p>');
+        if(autoScroll) {
+          messages[0].scrollTop = messages[0].scrollHeight;
+        }
+      }
       $(document).ready(function() {
         $("#btnStart").click(onStartClick);
         $("#textbox").keyup(function(e) {
           if(e.keyCode == 13) {
             onStartClick();
           }
+        });
+        $("#menu_item_chat").click(function() {
+          selectSideContent($("#menu_item_chat"), $("#content_chat"));
+        });
+        $("#menu_item_settings").click(function() {
+          selectSideContent($("#menu_item_settings"), $("#content_settings"));
+        });
+        $("#menu_item_about").click(function() {
+          selectSideContent($("#menu_item_about"), $("#content_about"));
         });
       });
       function onStartClick() {
@@ -73,9 +141,7 @@
         });
         var core = new HexCore();
         // TODO: hack - this is how the core knows how to display chat messages
-        core._print = function(message) {
-          $('#messages').append('<p class="msg">' + message + '</p>');
-        }
+        core._print = addChatMessage;
         var protocol = new HexProtocol(core, function(type, data) {
           socket.emit(HexProtocol.CHANNEL, [type, data]);
         });
