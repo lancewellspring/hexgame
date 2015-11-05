@@ -38,7 +38,7 @@ class ServerLogic
     #give hex to player
     hex = @core.grid.getRandomStartingHex()
     @core.players[playerName] = new Player(playerName, protocol)
-    action = ['take', playerName, hex.x, hex.y]
+    action = ['take', playerName, hex.x, hex.y, @core.players[playerName].color]
     @actions.push(action)
     protocol.actions.push(action)
     #show adjacent hexs to player
@@ -56,6 +56,7 @@ class ServerLogic
     @actions.push(action)
     protocol.actions.push(action)
     #show appropriate players the hex change.  TODO: this isn't working, need to investigate why
+    console.log("attacking player: #{player.name} #{player.color}")
     for name, p of @core.players
       if name == playerName
         continue

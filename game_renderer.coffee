@@ -40,7 +40,7 @@ class HexRenderer
     @stage = new PIXI.Container()
 
     @protocol.start(@playerName)
-    @core.players[@playerName] = new Player(@playerName, @protocol)
+    #@core.players[@playerName] = new Player(@playerName, @protocol)
     @firstSprite = true
 
     graphics = new PIXI.Graphics()

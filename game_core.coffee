@@ -69,8 +69,9 @@ class Grid
 
 class Player
   #TODO: player color currently isn't managed by server.  all clients choose their own colors for each player.
-  constructor: (@name, @protocol) ->
-    @color = Math.floor(Math.random() * (1 << 24)) | 0x282828
+  constructor: (@name, @protocol, @color) ->
+    if @color == null or @color is undefined
+      @color = Math.floor(Math.random() * (1 << 24)) | 0x282828
     @hexs = []
 
   update: (steps) ->
@@ -131,16 +132,15 @@ class HexCore
       console.log(action)
       [type, playerName, x, y, color] = action
       hex = @grid.hexs[x][y]
+      if playerName not of @players
+        @players[playerName] = new Player(playerName, protocol, color)
       player = @players[playerName]
       switch type
         when 'take'
           if hex.owner != null
             hex.owner.removeHex(hex)
-          if player != null
-            player.addHex(hex)
-            hex.setOwner(player)
-          else
-            hex.color = color
+          player.addHex(hex)
+          hex.setOwner(player)
           if not (hex in @cells)
             @cells.push(hex)
         when 'show'
