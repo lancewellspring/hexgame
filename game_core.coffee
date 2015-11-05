@@ -60,10 +60,11 @@ class Grid
       if player != null and player != hex.owner
         return true
     return false
-
+  
   getRandomStartingHex: () ->
     hex = null
-    while (hex == null or @hasAdjacentPlayers(hex))
+    #TODO: this is an infinite loop if there is no location w/o neighbors
+    while hex == null or hex.owner != null or @hasAdjacentPlayers(hex)
       hex = @hexs[Math.floor(Math.random() * @width)][Math.floor(Math.random() * @height)]
     return hex
 

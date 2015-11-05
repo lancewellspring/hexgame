@@ -168,9 +168,13 @@
         //setup event capturing
         $(window).on('resize', updateSize);
         $('#canvas').on("mousedown", onMouseDown);
+        $('#canvas').on("taphold", onMouseDown); //for mobile
         $('#canvas').on('mouseup', onMouseUp);
+        $('#canvas').on('tap', onMouseUp); // for mobile
         $('#canvas').on("mousemove", onMouseMove);
+        $('#canvas').on("touchmove", onMouseMove); // for mobile
         $('#canvas').on("wheel", onWheel);
+        //$('#canvas').on("swipe", onSwipe); //swipe wont work for pan, because swipe only works for horizontal swipes
         updateSize();
         renderer.animate();
         // send chat messages to the server

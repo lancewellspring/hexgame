@@ -119,6 +119,7 @@ class HexRenderer
         [x, y] = @gridToWindow(cell.x, cell.y)
         @hexSprites[key] = new HexSprite(cell, @texture, x, y, @currentWidth, @currentHeight)
         @hexSprites[key].sprite.click = (e) => @hexSpriteClick(e)
+        @hexSprites[key].sprite.tap = (e) => @hexSpriteClick(e)
         @stage.addChild(@hexSprites[key].sprite)
       @hexSprites[key].update(steps)
       
