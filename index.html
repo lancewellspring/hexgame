@@ -83,10 +83,28 @@
         socket.on(HexProtocol.CHANNEL, function(data) {
           protocol.receive(data[0], data[1]);
         });
+        //pass events to renderer
         var updateSize = function() {
           renderer.resize(window.innerWidth, window.innerHeight);
         };
+        var onMouseDown = function(e){
+          renderer.onMouseDown(e);
+        }
+        var onMouseUp = function(e){
+          renderer.onMouseUp(e);
+        }
+        var onMouseMove = function(e){
+          renderer.onMouseMove(e);
+        }
+        var onWheel = function(e){
+          renderer.onMouseWheel(e);
+        }
+        //setup event capturing
         $(window).on('resize', updateSize);
+        $('#canvas').on("mousedown", onMouseDown);
+        $('#canvas').on('mouseup', onMouseUp);
+        $('#canvas').on("mousemove", onMouseMove);
+        $('#canvas').on("wheel", onWheel);
         updateSize();
         renderer.animate();
         // send chat messages to the server

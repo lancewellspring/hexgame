@@ -132,6 +132,7 @@ class HexCore
       console.log(action)
       [type, playerName, x, y, color] = action
       hex = @grid.hexs[x][y]
+      #if this player hasn't been seen before, create it (including the player for a client when given his first hex)
       if playerName not of @players
         @players[playerName] = new Player(playerName, protocol, color)
       player = @players[playerName]

@@ -1,7 +1,9 @@
 class HexSprite
 
-  constructor: (@cell, texture, x, y) ->
+  constructor: (@cell, texture, x, y, width, height) ->
     @sprite = new PIXI.Sprite(texture)
+    @sprite.width = width
+    @sprite.height = height
     @sprite.pivot.set(@sprite.width / 2, @sprite.height / 2)
     @sprite.position.set(x, y)
     @sprite.interactive = true
@@ -25,7 +27,8 @@ class HexRenderer
   ]
 
   constructor: (@core, @protocol, @playerName, canvas) ->
-    #[@w, @h] = [window.innerWidth, window.innerHeight]
+    @mouseDown = @dragging = false
+    @lastDragx = @lastDragy = -1
     [@w, @h] = [canvas.width, canvas.height]
     #variables used to map grid x/y to window x/y
     @gridx = @gridy = 0
@@ -54,6 +57,8 @@ class HexRenderer
         graphics.lineTo(x, y)
     graphics.endFill()
     @texture = graphics.generateTexture()
+    @currentWidth = @texture.width
+    @currentHeight = @texture.height
     @hexSprites = {}
     # @cells = []
     # [xs, ys] = [[-1, 0, +1], [+1, -1, +1]]
@@ -83,10 +88,10 @@ class HexRenderer
 
   #maps grid x/y to window x/y
   gridToWindow: (cellx, celly) ->
-    x = @windowx + (cellx - @gridx) * @texture.width
-    y = @windowy + (celly - @gridy) * @texture.height * 3 / 4
+    x = @windowx + (cellx - @gridx) * @currentWidth
+    y = @windowy + (celly - @gridy) * @currentHeight * 3 / 4
     if Math.abs(celly) % 2 == 1
-      x += @texture.width / 2
+      x += @currentWidth / 2
     return [x, y]
     
   #TODO: incomplete, not sure if needed
@@ -112,10 +117,47 @@ class HexRenderer
           firstSprite = false
         #add new cell to sprite list
         [x, y] = @gridToWindow(cell.x, cell.y)
-        @hexSprites[key] = new HexSprite(cell, @texture, x, y)
+        @hexSprites[key] = new HexSprite(cell, @texture, x, y, @currentWidth, @currentHeight)
         @hexSprites[key].sprite.click = (e) => @hexSpriteClick(e)
         @stage.addChild(@hexSprites[key].sprite)
       @hexSprites[key].update(steps)
+      
+  onMouseDown: (e) ->
+    @mouseDown = true
+    
+  onMouseMove: (e) ->
+    if @mouseDown
+      @dragging = true;
+      difx = (e.clientX - @lastDragx) / 1.2
+      dify = (e.clientY - @lastDragy) / 1.2
+      if @lastDragx >= 0 
+        #update grid to window mapping, so we know where to draw new hexs
+        @windowx += difx
+        @windowy += dify
+        #update position of all existing hexs
+        for key, hexSprite of @hexSprites
+          hexSprite.sprite.position.x += difx
+          hexSprite.sprite.position.y += dify
+      @lastDragx = e.clientX
+      @lastDragy = e.clientY
+      
+  onMouseUp: (e) ->
+    @mouseDown = @dragging = false
+    @lastDragx = @lastDragy = -1
+    
+  onMouseWheel: (e) ->
+    delta = Math.abs(e.originalEvent.wheelDelta) / e.originalEvent.wheelDelta
+    if (delta < 0 and @currentWidth < @texture.width / 2) or (delta > 0 and @currentWidth > @texture.width * 2)
+      return
+    #update currentWidth so we know how big and where to draw new hexs
+    @currentWidth += delta * 10
+    @currentHeight += delta * 11
+    for key, hexSprite of @hexSprites
+      hexSprite.sprite.width = @currentWidth
+      hexSprite.sprite.height = @currentHeight
+      hexSprite.sprite.pivot.set(@currentWidth / 2, @currentHeight / 2)
+      [x,y] = @gridToWindow(hexSprite.sprite.gridx, hexSprite.sprite.gridy)
+      hexSprite.sprite.position.set(x,y)
 
 # public interface
 (exports ? window).HexRenderer = HexRenderer
