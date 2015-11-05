@@ -68,7 +68,7 @@ class Grid
     return hex
 
 class Player
-
+  #TODO: player color currently isn't managed by server.  all clients choose their own colors for each player.
   constructor: (@name, @protocol) ->
     @color = Math.floor(Math.random() * (1 << 24)) | 0x282828
     @hexs = []
@@ -136,15 +136,14 @@ class HexCore
         when 'take'
           if hex.owner != null
             hex.owner.removeHex(hex)
-          player.addHex(hex)
-          hex.setOwner(player)
-          @cells.push(hex)
-        when 'show'
-          if hex.owner != null
-            hex.owner.removeHex(hex)
-          if player != null and hex.owner != player
+          if player != null
             player.addHex(hex)
             hex.setOwner(player)
+          else
+            hex.color = color
+          if not (hex in @cells)
+            @cells.push(hex)
+        when 'show'
           if not (hex in @cells)
             hex.color = color
             @cells.push(hex)

@@ -55,16 +55,16 @@ class ServerLogic
     action = ['take', playerName, hex.x, hex.y]
     @actions.push(action)
     protocol.actions.push(action)
-    #show appropriate players the hex change
+    #show appropriate players the hex change.  TODO: this isn't working, need to investigate why
     for name, p of @core.players
       if name == playerName
         continue
       if hex in p.hexs
-        p.protocol.actions.push(['show', playerName, hex.x, hex.y, player.color])
+        p.protocol.actions.push(['take', playerName, hex.x, hex.y, player.color])
       else
         for h in p.hexs
           if hex in @core.grid.getAdjacentHexs(h)
-            p.protocol.actions.push(['show', playerName, hex.x, hex.y, player.color])
+            p.protocol.actions.push(['take', playerName, hex.x, hex.y, player.color])
 
     #show adjacent hexs to player
     hexs = @core.grid.getAdjacentHexs(hex)

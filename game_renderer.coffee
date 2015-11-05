@@ -40,7 +40,7 @@ class HexRenderer
     @stage = new PIXI.Container()
 
     @protocol.start(@playerName)
-    @core.players[@playerName] = new Player(@playerName)
+    @core.players[@playerName] = new Player(@playerName, @protocol)
     @firstSprite = true
 
     graphics = new PIXI.Graphics()
@@ -113,7 +113,6 @@ class HexRenderer
         #add new cell to sprite list
         [x, y] = @gridToWindow(cell.x, cell.y)
         @hexSprites[key] = new HexSprite(cell, @texture, x, y)
-        #TODO: Something wrong with the scope when calling hexspriteclick
         @hexSprites[key].sprite.click = (e) => @hexSpriteClick(e)
         @stage.addChild(@hexSprites[key].sprite)
       @hexSprites[key].update(steps)
