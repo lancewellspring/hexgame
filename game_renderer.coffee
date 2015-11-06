@@ -123,14 +123,14 @@ class HexRenderer
         @stage.addChild(@hexSprites[key].sprite)
       @hexSprites[key].update(steps)
       
-  onMouseDown: (e) ->
+  onMouseDown: () ->
     @mouseDown = true
     
-  onMouseMove: (e) ->
+  onMouseMove: (x, y) ->
     if @mouseDown
       @dragging = true;
-      difx = (e.clientX - @lastDragx) / 1.2
-      dify = (e.clientY - @lastDragy) / 1.2
+      difx = (x - @lastDragx) / 1.2
+      dify = (y- @lastDragy) / 1.2
       if @lastDragx >= 0 
         #update grid to window mapping, so we know where to draw new hexs
         @windowx += difx
@@ -139,15 +139,15 @@ class HexRenderer
         for key, hexSprite of @hexSprites
           hexSprite.sprite.position.x += difx
           hexSprite.sprite.position.y += dify
-      @lastDragx = e.clientX
-      @lastDragy = e.clientY
+      @lastDragx = x
+      @lastDragy = y
       
-  onMouseUp: (e) ->
+  onMouseUp: () ->
     @mouseDown = @dragging = false
     @lastDragx = @lastDragy = -1
     
-  onMouseWheel: (e) ->
-    delta = Math.abs(e.originalEvent.wheelDelta) / e.originalEvent.wheelDelta
+  onMouseWheel: (delta) ->
+    #delta = Math.abs(e.originalEvent.wheelDelta) / e.originalEvent.wheelDelta
     if (delta < 0 and @currentWidth < @texture.width / 2) or (delta > 0 and @currentWidth > @texture.width * 2)
       return
     #update currentWidth so we know how big and where to draw new hexs

@@ -155,25 +155,90 @@
           renderer.resize($("#canvas").width(), $("#canvas").height());
         };
         var onMouseDown = function(e){
-          renderer.onMouseDown(e);
+          renderer.onMouseDown();
         }
         var onMouseUp = function(e){
-          renderer.onMouseUp(e);
+          renderer.onMouseUp();
         }
         var onMouseMove = function(e){
-          renderer.onMouseMove(e);
+          renderer.onMouseMove(e.clientX, e.clientY);
         }
         var onWheel = function(e){
-          renderer.onMouseWheel(e);
+          var delta = Math.abs(e.originalEvent.wheelDelta) / e.originalEvent.wheelDelta
+          renderer.onMouseWheel(delta);
+        }
+        //keep track of a single touch to watch for panning
+        var touch1Idx = null;
+        var touch2Idx = null;
+        var touchdif = 0;
+        var onTouchStart = function(e){
+          var touches = e.originalEvent.changedTouches;
+          if(touch1Idx == null){
+            touch1Idx = touches[0].identifier;
+            renderer.onMouseDown();
+          }
+          else{
+            touch2Idx = touches[0].identifier;
+          }
+        }
+        var onTouchEnd = function(e){
+          var touches = e.originalEvent.changedTouches;
+
+          for (var i = 0; i < touches.length; i++) {
+            if(touches[i].identifier == touch1Idx){
+              touch1Idx = null;
+              renderer.onMouseUp();
+              break;
+            }
+            else if(touches[i].identifier == touch2Idx){
+              touch2Idx = null;
+              break;
+            }
+          }
+        }
+        var onTouchMove = function(e){
+          var touches = e.originalEvent.changedTouches;
+          //zoom
+          if(touch1Idx != null && touch2Idx != null){
+            var touch1 = touch2 = null;
+            for (var i = 0; i < touches.length; i++) {
+              if(touches[i].identifier == touch1Idx)
+                touch1 = touches[i];
+              if(touches[i].identifier == touch2Idx)
+                touch2 = touches[i];
+            }
+            if(touch1 != null && touch2 != null){
+              var x1 = touch1.pageX;
+              var y1 = touch1.pageY;
+              var x2 = touch2.pageX;
+              var y2 = touch2.pageY;
+              var d = Math.sqrt(Math.pow(x2-x1, 2) + Math.pow(y2-y1, 2))
+              if(Math.abs(touchdif - d) > 1){
+                if(touchdif > d)
+                  renderer.onMouseWheel(-1);
+                else
+                  renderer.onMouseWheel(1);
+              }
+              touchdif = d
+            }
+          }
+          //drag
+          else if(touch1Idx != null){
+            for (var i = 0; i < touches.length; i++) {
+              if(touches[i].identifier == touch1Idx){
+                renderer.onMouseMove(touches[i].pageX, touches[i].pageY);
+              }
+            }
+          }
         }
         //setup event capturing
         $(window).on('resize', updateSize);
         $('#canvas').on("mousedown", onMouseDown);
-        $('#canvas').on("taphold", onMouseDown); //for mobile
+        $('#canvas').on("touchstart", onTouchStart); //for mobile
         $('#canvas').on('mouseup', onMouseUp);
-        $('#canvas').on('tap', onMouseUp); // for mobile
+        $('#canvas').on('touchend', onTouchEnd); // for mobile
         $('#canvas').on("mousemove", onMouseMove);
-        $('#canvas').on("touchmove", onMouseMove); // for mobile
+        $('#canvas').on("touchmove", onTouchMove); // for mobile
         $('#canvas').on("wheel", onWheel);
         //$('#canvas').on("swipe", onSwipe); //swipe wont work for pan, because swipe only works for horizontal swipes
         updateSize();
