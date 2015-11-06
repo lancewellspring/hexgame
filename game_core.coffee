@@ -4,11 +4,8 @@ class HexCell
     @color = 0xffffff
     @owner = null
     @units = 0
-    #@speed = 1
-    #@angle = 0
 
   update: (steps) ->
-    #@angle += @speed * steps
 
   setOwner: (player) ->
     @owner = player
@@ -63,13 +60,16 @@ class Grid
   
   getRandomStartingHex: () ->
     hex = null
-    #TODO: this is an infinite loop if there is no location w/o neighbors
+    #TODO: Hacky way to give any random hex to player if there are no hexs w/o neighbors
+    i = 0
     while hex == null or hex.owner != null or @hasAdjacentPlayers(hex)
       hex = @hexs[Math.floor(Math.random() * @width)][Math.floor(Math.random() * @height)]
+      i+= 1
+      if i > 100
+        break
     return hex
 
 class Player
-  #TODO: player color currently isn't managed by server.  all clients choose their own colors for each player.
   constructor: (@name, @protocol, @color) ->
     if @color == null or @color is undefined
       @color = Math.floor(Math.random() * (1 << 24)) | 0x282828
@@ -97,7 +97,7 @@ class HexCore
     @grid.getAdjacentHexs(@grid.hexs[2][3])
     @currentStep = @limitStep = 0
     @limitActions = []
-    @cells = []#(new HexCell(i) for i in [0...3])
+    @cells = []
     @players = {}
 
   #updates things which are constantly changing (ie unit production)

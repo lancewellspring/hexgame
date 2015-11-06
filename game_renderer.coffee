@@ -32,8 +32,8 @@ class HexRenderer
     [@w, @h] = [canvas.width, canvas.height]
     #variables used to map grid x/y to window x/y
     @gridx = @gridy = 0
-    @windowx = @w/2
-    @windowy = @h/2
+    @windowx = 0
+    @windowy = 0
     options =
       view: canvas
       antialias: true
@@ -43,7 +43,6 @@ class HexRenderer
     @stage = new PIXI.Container()
 
     @protocol.start(@playerName)
-    #@core.players[@playerName] = new Player(@playerName, @protocol)
     @firstSprite = true
 
     graphics = new PIXI.Graphics()
@@ -60,12 +59,6 @@ class HexRenderer
     @currentWidth = @texture.width
     @currentHeight = @texture.height
     @hexSprites = {}
-    # @cells = []
-    # [xs, ys] = [[-1, 0, +1], [+1, -1, +1]]
-    # for [c, x, y] in _.zip(@core.cells, xs, ys)
-      # cell = new HexSprite(c, @protocol, texture, x * 64, y * 55)
-      # @cells.push(cell)
-      # @stage.addChild(cell.sprite)
 
   resize: (@w, @h) ->
     @renderer.resize(@w, @h)
@@ -93,11 +86,6 @@ class HexRenderer
     if Math.abs(celly) % 2 == 1
       x += @currentWidth / 2
     return [x, y]
-    
-  #TODO: incomplete, not sure if needed
-  windowToGrid: (winx, winy) ->
-    x = (winx - @windowx) / @texture.width
-    y = (winy - @windowy) / @texture.height * 4 / 3
 
   hexSpriteClick: (e) ->
     @protocol.attack([@playerName, e.target.gridx, e.target.gridy])
@@ -110,10 +98,8 @@ class HexRenderer
       if not (key of @hexSprites)
         if @firstSprite and cell.owner != null and cell.owner.name == @playerName
           #map grid location to window location
-          #TODO: this should be placing the first hex in the middle of the screen, but its not working
           @gridx = cell.x
           @gridy = cell.y
-          console.log("x y: " + @gridx + " " + @gridy)
           firstSprite = false
         #add new cell to sprite list
         [x, y] = @gridToWindow(cell.x, cell.y)
