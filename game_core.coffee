@@ -70,9 +70,12 @@ class Grid
     return hex
 
 class Player
-  constructor: (@name, @protocol, @color) ->
+  @playerCount = 0
+  constructor: (@name, @id, @color, @protocol) ->
     if @color == null or @color is undefined
       @color = Math.floor(Math.random() * (1 << 24)) | 0x282828
+    if @id == null or @id is undefined
+      @id = Player.playerCount++
     @hexs = []
 
   update: (steps) ->
@@ -92,7 +95,8 @@ class HexCore
   @setColor: (index, color) -> ['color', [index, color]]
   @setSpeed: (index, speed) -> ['speed', [index, speed]]
 
-  constructor: () ->
+  constructor: (@playerName) ->
+    @thisPlayer = null
     @grid = new Grid()
     @grid.getAdjacentHexs(@grid.hexs[2][3])
     @currentStep = @limitStep = 0
@@ -131,38 +135,55 @@ class HexCore
       console.log("#{@limitActions.length} moves in last #{@currentStep} steps")
     for action in @limitActions
       console.log(action)
-      [type, playerName, x, y, color] = action
+      [type, playerId, x, y] = action
       hex = @grid.hexs[x][y]
-      #if this player hasn't been seen before, create it (including the player for a client when given his first hex)
-      if playerName not of @players
-        @players[playerName] = new Player(playerName, protocol, color)
-      player = @players[playerName]
+      if playerId != null and playerId != undefined
+        #TODO: assert playerId of @players
+        player = @players[playerId]
       switch type
-        when 'take'
-          if hex.owner != null
+        when 'hex'
+          #TODO: logic to decide if this hex was taken from current player, and if so, hide it.
+          if hex.owner != null and hex.owner != undefined
             hex.owner.removeHex(hex)
-          player.addHex(hex)
-          hex.setOwner(player)
+          if playerId != null and playerId != undefined
+            hex.setOwner(player)
+            player.addHex(hex)
           if not (hex in @cells)
             @cells.push(hex)
+        when 'take'
+          console.log("Received old 'take' action")
+          # if hex.owner != null
+            # hex.owner.removeHex(hex)
+          # player.addHex(hex)
+          # hex.setOwner(player)
+          # if not (hex in @cells)
+            # @cells.push(hex)
         when 'show'
-          if not (hex in @cells)
-            hex.color = color
-            @cells.push(hex)
-        when 'hide'
-          #TODO: figure out a way to notify the renderer to remove this hex from being displayed
+          console.log("Received old 'show' action")
+          # if not (hex in @cells)
+            # hex.color = color
+            # @cells.push(hex)
         else
           console.log("ignored action [#{type}]")
 
     @currentStep = 0
     @limitStep = steps
     @limitActions = actions
+    
+  _playerJoined: (name, id, color) ->
+    console.log("playerJoined: #{name} #{id}")
+    @players[id] = new Player(name, id, color, null)
+    if name == @playerName
+      @thisPlayer = @players[id]
 
   # called whenever a chat message is received
   _chat: (protocol, message) ->
     # TODO: this should be organized better
     if @_print?
       @_print(message)
+      
+  sendAttack: (protocol, x, y) ->
+    protocol.attack([@thisPlayer.id, x, y])
 
 # public interface
 (exports ? window).HexCore = HexCore

@@ -140,7 +140,7 @@
         socket.on('message', function(data) {
           console.log('server says: [' + data + ']');
         });
-        var core = new HexCore();
+        var core = new HexCore($("#textbox").val());
         // TODO: hack - this is how the core knows how to display chat messages
         core._print = addChatMessage;
         var protocol = new HexProtocol(core, function(type, data) {

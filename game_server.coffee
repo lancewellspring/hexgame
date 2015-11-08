@@ -33,45 +33,50 @@ class ServerLogic
   _sync: (protocol, steps, actions) ->
     console.log('a naughty client just sent the `sync` command')
 
-  _start: (protocol, playerName) ->
+  _playerStart: (protocol, playerName) ->
     console.log("#{playerName} has joined the game!")
+    #send all current players to new player
+    for id, player of @core.players
+      protocol.playerJoined(player.name, id, player.color)
     #give hex to player
     hex = @core.grid.getRandomStartingHex()
-    @core.players[playerName] = new Player(playerName, protocol)
-    action = ['take', playerName, hex.x, hex.y, @core.players[playerName].color]
+    player = new Player(playerName, null, null, protocol)
+    @core.players[player.id] = player 
+    action = ['hex', player.id, hex.x, hex.y]
     @actions.push(action)
     protocol.actions.push(action)
+    #immediately notify all clients of new player
+    for client in @clients
+      client.playerJoined(playerName, player.id, player.color)
     #show adjacent hexs to player
     hexs = @core.grid.getAdjacentHexs(hex)
     for h in hexs
-      action = ['show', playerName, h.x, h.y, h.color]
+      action = ['hex', hex?.owner?.id, h.x, h.y]
       @actions.push(action)
       protocol.actions.push(action)
 
   _attack: (protocol, gameData) ->
-    playerName = gameData[0]
-    player = @core.players[playerName]
-    hex = @core.grid.hexs[gameData[1]][gameData[2]]
-    action = ['take', playerName, hex.x, hex.y]
+    [playerId, x, y] = gameData
+    player = @core.players[playerId]
+    hex = @core.grid.hexs[x][y]
+    action = ['hex', playerId, hex.x, hex.y]
     @actions.push(action)
     protocol.actions.push(action)
-    #show appropriate players the hex change.  TODO: this isn't working, need to investigate why
-    console.log("attacking player: #{player.name} #{player.color}")
-    for name, p of @core.players
-      if name == playerName
+    #show appropriate players the hex change.
+    for id, p of @core.players
+      if id == playerId
         continue
       if hex in p.hexs
-        p.protocol.actions.push(['take', playerName, hex.x, hex.y, player.color])
+        p.protocol.actions.push(['hex', playerId, hex.x, hex.y])
       else
         for h in p.hexs
           if hex in @core.grid.getAdjacentHexs(h)
-            p.protocol.actions.push(['take', playerName, hex.x, hex.y, player.color])
-
+            p.protocol.actions.push(['hex', playerId, hex.x, hex.y])
     #show adjacent hexs to player
     hexs = @core.grid.getAdjacentHexs(hex)
     for h in hexs
       #TODO: this often sends 'show' for hexs that the player can actually already see, improve performance?
-      action = ['show', playerName, h.x, h.y, h.color]
+      action = ['hex', h?.owner?.id, h.x, h.y]
       @actions.push(action)
       protocol.actions.push(action)
     if hex.owner?

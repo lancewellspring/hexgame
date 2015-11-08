@@ -42,7 +42,7 @@ class HexRenderer
     @renderer = new PIXI.autoDetectRenderer(@w, @h, options)
     @stage = new PIXI.Container()
 
-    @protocol.start(@playerName)
+    @protocol.playerStart(@playerName)
     @firstSprite = true
 
     graphics = new PIXI.Graphics()
@@ -88,7 +88,8 @@ class HexRenderer
     return [x, y]
 
   hexSpriteClick: (e) ->
-    @protocol.attack([@playerName, e.target.gridx, e.target.gridy])
+    @core.sendAttack(@protocol, e.target.gridx, e.target.gridy)
+    #@protocol.attack([@core.players[, e.target.gridx, e.target.gridy])
 
   update: (steps) ->
     #TODO: I'm not a fan of the way renderer gets cells from core, need to think about doing it differently (a way that would also work for core notifying renderer when to hide cells as well)

@@ -14,15 +14,18 @@ class HexProtocol
       when 'sync'
         [steps, actions] = data
         @handler._sync(this, steps, actions)
-      when 'start'
+      when 'playerStart'
         [@playerName] = data
-        @handler._start(this, @playerName)
+        @handler._playerStart(this, @playerName)
       when 'attack'
         [gameData] = data
         @handler._attack(this, gameData)
       when 'chat'
         [message] = data
         @handler._chat(this, message)
+      when 'playerJoined'
+        [name, id, color] = data
+        @handler._playerJoined(name, id, color)
       else
         console.log("ignored command [#{type}]")
 
@@ -34,10 +37,14 @@ class HexProtocol
   sync: (steps) ->
     @send('sync', [steps, @actions])
     @actions = []
+	
+  # sever -> client: let other clients know of new player
+  playerJoined: (name, id, color) ->
+    @send('playerJoined', [name, id, color]);
 
   # client -> server: attempt player start
-  start: (@playerName) ->
-    @send('start', [@playerName])
+  playerStart: (@playerName) ->
+    @send('playerStart', [@playerName])
 
   # client -> server: attempt player attack
   attack: (gameData) ->
