@@ -52,7 +52,6 @@ class ServerLogic
     hexs = @core.grid.getAdjacentHexs(hex)
     for h in hexs
       action = ['hex', hex?.owner?.id, h.x, h.y]
-      @actions.push(action)
       protocol.actions.push(action)
 
   _attack: (protocol, gameData) ->
@@ -70,6 +69,7 @@ class ServerLogic
         p.protocol.actions.push(['hex', playerId, hex.x, hex.y])
       else
         for h in p.hexs
+          #TODO: there is likely a faster way to do this, not sure if its eating up much cpu tho.
           if hex in @core.grid.getAdjacentHexs(h)
             p.protocol.actions.push(['hex', playerId, hex.x, hex.y])
     #show adjacent hexs to player
@@ -79,9 +79,6 @@ class ServerLogic
       action = ['hex', h?.owner?.id, h.x, h.y]
       @actions.push(action)
       protocol.actions.push(action)
-    if hex.owner?
-      #TODO: need to send 'hide' action to hex.owner for the hex's he lost sight of
-      return 0
 
   _chat: (protocol, message) ->
     # ignore spoofed messages
