@@ -72,9 +72,9 @@ class Grid
 class Player
   @playerCount = 0
   constructor: (@name, @id, @color, @protocol) ->
-    if @color == null or @color is undefined
+    if not @color?
       @color = Math.floor(Math.random() * (1 << 24)) | 0x282828
-    if @id == null or @id is undefined
+    if not @id?
       @id = Player.playerCount++
     @hexs = []
 
