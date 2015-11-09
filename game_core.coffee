@@ -137,15 +137,15 @@ class HexCore
       console.log(action)
       [type, playerId, x, y] = action
       hex = @grid.hexs[x][y]
-      if playerId != null and playerId != undefined
+      if playerId?
         #TODO: assert playerId of @players
         player = @players[playerId]
       switch type
         when 'hex'
           #TODO: logic to decide if this hex was taken from current player, and if so, hide it.
-          if hex.owner != null and hex.owner != undefined
+          if hex.owner?
             hex.owner.removeHex(hex)
-          if playerId != null and playerId != undefined
+          if playerId?
             hex.setOwner(player)
             player.addHex(hex)
           if not (hex in @cells)
