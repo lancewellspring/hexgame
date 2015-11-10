@@ -4,16 +4,11 @@ class HexSprite
     @sprite = new PIXI.Sprite(texture)
     @sprite.width = width
     @sprite.height = height
-    @sprite.pivot.set(@sprite.width / 2, @sprite.height / 2)
+    @sprite.pivot.set(width / 2, height / 2)
     @sprite.position.set(x, y)
     @sprite.interactive = true
     @sprite.gridx = @cell.x
     @sprite.gridy = @cell.y
-    # @sprite.click = @sprite.tap = (e) =>
-      # #color = Math.floor(Math.random() * (1 << 24)) | 0x282828
-      # #@protocol.move(HexCore.setColor(@cell.index, color))
-      # #@protocol.move(HexCore.setSpeed(@cell.index, @cell.speed * -1))
-      # @click(e)
 
   update: (steps) ->
     #@sprite.rotation = @cell.angle * 1e-3
@@ -26,7 +21,7 @@ class HexRenderer
     Math.cos(Math.PI / 3 * i) * size,
   ]
 
-  constructor: (@core, @protocol, @playerName, canvas) ->
+  constructor: (canvas) ->
     @mouseDown = @dragging = false
     @lastDragx = @lastDragy = -1
     [@w, @h] = [canvas.width, canvas.height]
@@ -42,7 +37,6 @@ class HexRenderer
     @renderer = new PIXI.autoDetectRenderer(@w, @h, options)
     @stage = new PIXI.Container()
 
-    @protocol.playerStart(@playerName)
     @firstSprite = true
 
     graphics = new PIXI.Graphics()
@@ -65,17 +59,6 @@ class HexRenderer
     @stage.position.set(@w / 2, @h / 2)
 
   animate: (millis=0) ->
-    # request the next frame
-    requestAnimationFrame((x) => @animate(x))
-    # calculate elapsed time since last frame
-    steps = Math.round(millis - (@last_millis ? millis))
-    # TODO - huge hacks here. run at 15/16th speed to prevent getting ahead of the server (which would cause the client to lag until the server catches up)
-    steps -= 1
-    @last_millis = millis
-    # update game and animations
-    if steps > 0
-      @core.update(steps)
-      @update(steps)
     # draw, finally
     @renderer.render(@stage)
 
@@ -87,26 +70,24 @@ class HexRenderer
       x += @currentWidth / 2
     return [x, y]
 
-  hexSpriteClick: (e) ->
-    @core.sendAttack(@protocol, e.target.gridx, e.target.gridy)
-    #@protocol.attack([@core.players[, e.target.gridx, e.target.gridy])
+  hexSpriteClick: (x, y) ->
+    #@core.sendAttack(@protocol, e.target.gridx, e.target.gridy)
 
-  update: (steps) ->
-    #TODO: I'm not a fan of the way renderer gets cells from core, need to think about doing it differently (a way that would also work for core notifying renderer when to hide cells as well)
-    #loop through cores cells instead, and add any new ones to sprite list
-    for cell in @core.cells
+  update: (steps, cells) ->
+    for cell in cells
+      #TODO: key doesn't work for grid size larger than 10
       key = "#{cell.x}#{cell.y}"
       if not (key of @hexSprites)
-        if @firstSprite and cell.owner != null and cell.owner.name == @playerName
+        if @firstSprite #and cell.owner != null and cell.owner.name == @playerName
           #map grid location to window location
           @gridx = cell.x
           @gridy = cell.y
-          firstSprite = false
+          @firstSprite = false
         #add new cell to sprite list
         [x, y] = @gridToWindow(cell.x, cell.y)
         @hexSprites[key] = new HexSprite(cell, @texture, x, y, @currentWidth, @currentHeight)
-        @hexSprites[key].sprite.click = (e) => @hexSpriteClick(e)
-        @hexSprites[key].sprite.tap = (e) => @hexSpriteClick(e)
+        @hexSprites[key].sprite.click = (e) => @hexSpriteClick(e.target.gridx, e.target.gridy)
+        @hexSprites[key].sprite.tap = (e) => @hexSpriteClick(e.target.gridx, e.target.gridy)
         @stage.addChild(@hexSprites[key].sprite)
       @hexSprites[key].update(steps)
       
@@ -148,4 +129,4 @@ class HexRenderer
       hexSprite.sprite.position.set(x,y)
 
 # public interface
-(exports ? window).HexRenderer = HexRenderer
+(window ? {}).HexRenderer = exports.HexRenderer = HexRenderer

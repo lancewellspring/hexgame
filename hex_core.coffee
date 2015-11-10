@@ -19,7 +19,7 @@ class HexCell
     [@index, @color, @speed, @angle] = state
 
 
-class Grid
+class HexGrid
 
   constructor: () ->
     @width = 10
@@ -68,14 +68,70 @@ class Grid
       if i > 100
         break
     return hex
+    
+class HexProtocol
 
-class Player
+  @CHANNEL = 'hex'
+
+  constructor: (@handler, @send) ->
+    @actions = []
+
+  # parse received data and call the appropriate handler function
+  receive: (type, data) ->
+    switch type
+      when 'load'
+        [state] = data
+        @handler._load(this, state)
+      when 'sync'
+        [steps, actions] = data
+        @handler._sync(this, steps, actions)
+      when 'playerStart'
+        [@playerName] = data
+        @handler._playerStart(this, @playerName)
+      when 'attack'
+        [gameData] = data
+        @handler._attack(this, gameData)
+      when 'chat'
+        [message] = data
+        @handler._chat(this, message)
+      when 'playerJoined'
+        [name, id, color] = data
+        @handler._playerJoined(name, id, color)
+      else
+        console.log("ignored command [#{type}]")
+
+  # sever -> client: initial game state
+  load: (state) ->
+    @send('load', [state])
+
+  # sever -> client: incremental game updates
+  sync: (steps) ->
+    @send('sync', [steps, @actions])
+    @actions = []
+	
+  # sever -> client: let other clients know of new player
+  playerJoined: (name, id, color) ->
+    @send('playerJoined', [name, id, color]);
+
+  # client -> server: attempt player start
+  playerStart: (@playerName) ->
+    @send('playerStart', [@playerName])
+
+  # client -> server: attempt player attack
+  attack: (gameData) ->
+    @send('attack', [gameData])
+
+  # bidirectional: broadcast a chat message
+  chat: (message) ->
+    @send('chat', [message])
+
+class HexPlayer
   @playerCount = 0
   constructor: (@name, @id, @color, @protocol) ->
     if not @color?
       @color = Math.floor(Math.random() * (1 << 24)) | 0x282828
     if not @id?
-      @id = Player.playerCount++
+      @id = HexPlayer.playerCount++
     @hexs = []
 
   update: (steps) ->
@@ -95,10 +151,8 @@ class HexCore
   @setColor: (index, color) -> ['color', [index, color]]
   @setSpeed: (index, speed) -> ['speed', [index, speed]]
 
-  constructor: (@playerName) ->
-    @thisPlayer = null
-    @grid = new Grid()
-    @grid.getAdjacentHexs(@grid.hexs[2][3])
+  constructor: () ->
+    @grid = new HexGrid()
     @currentStep = @limitStep = 0
     @limitActions = []
     @cells = []
@@ -169,22 +223,8 @@ class HexCore
     @currentStep = 0
     @limitStep = steps
     @limitActions = actions
-    
-  _playerJoined: (name, id, color) ->
-    console.log("playerJoined: #{name} #{id}")
-    @players[id] = new Player(name, id, color, null)
-    if name == @playerName
-      @thisPlayer = @players[id]
-
-  # called whenever a chat message is received
-  _chat: (protocol, message) ->
-    # TODO: this should be organized better
-    if @_print?
-      @_print(message)
-      
-  sendAttack: (protocol, x, y) ->
-    protocol.attack([@thisPlayer.id, x, y])
 
 # public interface
-(exports ? window).HexCore = HexCore
-(exports ? window).Player = Player
+(window ? {}).HexCore = exports.HexCore = HexCore
+(window ? {}).HexPlayer = exports.HexPlayer = HexPlayer
+(window ? {}).HexProtocol = exports.HexProtocol = HexProtocol
