@@ -3,31 +3,31 @@ HexPlayer = require('./hex_core.js').HexPlayer
 HexProtocol = require('./hex_core.js').HexProtocol
 
 class HexClient extends HexCore
-  
+
   constructor: (@playerName, @renderer, socket) ->
     super()
     @thisPlayer = null
     @cells = []
     #setup click callback
     @renderer.hexSpriteClick = @sendAttack
-    
+
     @protocol = new HexProtocol(this, (type, data) =>
       socket.emit(HexProtocol.CHANNEL, [type, data])
     )
-    
+
     socket.on(HexProtocol.CHANNEL, (data) =>
       @protocol.receive(data[0], data[1])
     )
-    
+
     @protocol.playerStart(@playerName)
-    
+
   update: (steps) ->
     if super
       return false
     for cell in @cells
       cell.update(steps)
     return true
-    
+
   animate: (millis=0) ->
     # request the next frame
     requestAnimationFrame((x) => @animate(x))
@@ -41,7 +41,7 @@ class HexClient extends HexCore
       @update(steps)
       @renderer.update(steps, @cells)
     @renderer.animate()
-    
+
   updateHex: (hex, player) ->
     #check if this hex was taken from @thisPlayer.  if so, recalculate the sight of @thisPlayer (after hex is updated with new owner).
     loseHex = (hex?.owner == @thisPlayer and player != @thisPlayer)
@@ -61,13 +61,14 @@ class HexClient extends HexCore
           @renderer.removeHex(h)
     else if not (hex in @cells)
       @cells.push(hex)
-      
+    @renderer.autoScroll()
+
   sendAttack: (x, y) =>
     @protocol.attack([@thisPlayer.id, x, y])
-    
+
   sendChat: (msg) ->
     @protocol.chat(msg)
-    
+
   _playerJoined: (name, id, color) ->
     console.log("playerJoined: #{name} #{id}")
     @players[id] = new HexPlayer(name, id, color, null)
@@ -79,6 +80,6 @@ class HexClient extends HexCore
     # TODO: this should be organized better
     if @_print?
       @_print(message)
-      
+
 # public interface
 (window ? {}).HexClient = exports.HexClient = HexClient

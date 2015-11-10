@@ -28,6 +28,8 @@
       .content { width: 208px; height: 100%; }
       .menu_item { width: 100%; height: 48px; text-shadow: 0 0 8px #000; font-size: 32px; }
       .menu_item_selected { background-color: #222; }
+      .screenshot { margin: 4px; width: calc(100% - 8px); border: 1px dashed #888; }
+      .div_button { margin: 4px; padding: 4px; text-align: center; border: 3px solid #ccc; border-radius: 5px; background-color: #222; cursor: pointer; -webkit-user-select: none; }
     </style>
   </head>
   <body>
@@ -58,7 +60,9 @@
           </div>
         </div>
         <div id="content_settings" class="content" style="display: none;">
-          settings
+          <div id="btnScreenshot" class="div_button">
+            <i class="fa fa-camera"></i> Share Screenshot
+          </div>
         </div>
         <div id="content_about" class="content" style="display: none;">
           about
@@ -74,9 +78,9 @@
       function toggleSideBar(show) {
         sideBarVisible = show;
         if(show) {
-          $("#div_content").animate({ width: '208px' }, 100, updateSize);
+          $("#div_content").animate({ width: '208px' }, 0, updateSize);
         } else {
-          $("#div_content").animate({ width: '0px' }, 100, updateSize);
+          $("#div_content").animate({ width: '0px' }, 0, updateSize);
         }
       }
       function selectSideContent(button, content) {
@@ -229,6 +233,16 @@
             }
           }
         }
+        // set up screenshot sharing
+        function shareScreenshot() {
+          selectSideContent($("#menu_item_chat"), $("#content_chat"));
+          addChatMessage('Uploading screenshot...');
+          hexclient.renderer.takeScreenshot(function(data) {
+            var message = '<img src="' + data + '" class="screenshot"></img>';
+            message = '<a target="_blank" href="' + data + '">' + message + '</a>';
+            hexclient.sendChat(message);
+          });
+        }
         //setup event capturing
         $(window).on('resize', updateSize);
         $('#canvas').on("mousedown", onMouseDown);
@@ -239,15 +253,17 @@
         $('#canvas').on("touchmove", onTouchMove); // for mobile
         $('#canvas').on("wheel", onWheel);
         //$('#canvas').on("swipe", onSwipe); //swipe wont work for pan, because swipe only works for horizontal swipes
-        updateSize();
-        hexclient.animate();
+        $('#btnScreenshot').on('click', shareScreenshot);
         // send chat messages to the server
         $("#textbox2").keyup(function(e) {
           if(e.keyCode == 13) {
-            hexclient.sendChat($("#textbox2").val())
+            hexclient.sendChat($("#textbox2").val());
             $("#textbox2").val('');
           }
         });
+        // start rendering
+        updateSize();
+        hexclient.animate();
       }
     </script>
   </body>
