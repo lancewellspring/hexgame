@@ -5,10 +5,7 @@ server = require('http').Server(app)
 io = require('socket.io')(server)
 
 # the game
-#HexCore = require('./public/game_core.js').HexCore
-#Player = require('./public/game_core.js').Player
 HexProtocol = require('./public/hex_core.js').HexProtocol
-#core = new HexCore()
 HexServer = require('./public/hex_server.js').HexServer
 hexServer = new HexServer()
 

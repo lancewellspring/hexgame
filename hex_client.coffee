@@ -7,6 +7,7 @@ class HexClient extends HexCore
   constructor: (@playerName, @renderer, socket) ->
     super()
     @thisPlayer = null
+    @cells = []
     #setup click callback
     @renderer.hexSpriteClick = @sendAttack
     
@@ -19,6 +20,13 @@ class HexClient extends HexCore
     )
     
     @protocol.playerStart(@playerName)
+    
+  update: (steps) ->
+    if super
+      return false
+    for cell in @cells
+      cell.update(steps)
+    return true
     
   animate: (millis=0) ->
     # request the next frame
@@ -33,6 +41,24 @@ class HexClient extends HexCore
       @update(steps)
       @renderer.update(steps, @cells)
     @renderer.animate()
+    
+  updateHex: (hex, player) ->
+    #check if this hex was taken from @thisPlayer.  if so, recalculate the sight of @thisPlayer (after hex is updated with new owner).
+    loseHex = (hex?.owner == @thisPlayer and player != @thisPlayer)
+    super(hex, player)
+    if loseHex
+      visible = []
+      for myhex in @thisPlayer.hexs
+        visible.push(myhex)
+        for h in @grid.getAdjacentHexs(myhex)
+          visible.push(h)
+      for h in @grid.getAdjacentHexs(hex)
+        if not (h in visible)
+          index = @cells.indexOf(h)
+          @cells.splice(index, 1)
+          @renderer.removeHex(h)
+    else if not (hex in @cells)
+      @cells.push(hex)
       
   sendAttack: (x, y) =>
     @protocol.attack([@thisPlayer.id, x, y])

@@ -155,7 +155,6 @@ class HexCore
     @grid = new HexGrid()
     @currentStep = @limitStep = 0
     @limitActions = []
-    @cells = []
     @players = {}
 
   #updates things which are constantly changing (ie unit production)
@@ -164,10 +163,15 @@ class HexCore
     if steps == 0
       console.log('lagging')
       return false
-    for cell in @cells
-      cell.update(steps)
     @currentStep += steps
     return true
+    
+  updateHex: (hex, player) ->
+    if hex.owner?
+      hex.owner.removeHex(hex)
+    if player?
+      hex.setOwner(player)
+      player.addHex(hex)
 
   #TODO: need to update save/load for latest changes
   _save: () ->
@@ -191,35 +195,19 @@ class HexCore
       console.log(action)
       [type, playerId, x, y] = action
       hex = @grid.hexs[x][y]
+      player=null
       if playerId?
         #TODO: assert playerId of @players
         player = @players[playerId]
       switch type
         when 'hex'
-          #TODO: logic to decide if this hex was taken from current player, and if so, hide it.
-          if hex.owner?
-            hex.owner.removeHex(hex)
-          if playerId?
-            hex.setOwner(player)
-            player.addHex(hex)
-          if not (hex in @cells)
-            @cells.push(hex)
+          @updateHex(hex, player)
         when 'take'
           console.log("Received old 'take' action")
-          # if hex.owner != null
-            # hex.owner.removeHex(hex)
-          # player.addHex(hex)
-          # hex.setOwner(player)
-          # if not (hex in @cells)
-            # @cells.push(hex)
         when 'show'
           console.log("Received old 'show' action")
-          # if not (hex in @cells)
-            # hex.color = color
-            # @cells.push(hex)
         else
           console.log("ignored action [#{type}]")
-
     @currentStep = 0
     @limitStep = steps
     @limitActions = actions

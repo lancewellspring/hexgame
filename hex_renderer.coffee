@@ -72,7 +72,12 @@ class HexRenderer
 
   hexSpriteClick: (x, y) ->
     #@core.sendAttack(@protocol, e.target.gridx, e.target.gridy)
-
+    
+  removeHex: (hex) ->
+    key = "#{hex.x}#{hex.y}"
+    @stage.removeChild(@hexSprites[key].sprite)
+    delete @hexSprites[key]
+    
   update: (steps, cells) ->
     for cell in cells
       #TODO: key doesn't work for grid size larger than 10
