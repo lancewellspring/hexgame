@@ -1,3 +1,4 @@
+HexVersion = require('./hex_version.js').HexVersion
 HexCore = require('./hex_core.js').HexCore
 HexPlayer = require('./hex_core.js').HexPlayer
 HexProtocol = require('./hex_core.js').HexProtocol

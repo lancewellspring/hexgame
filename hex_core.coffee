@@ -57,7 +57,7 @@ class HexGrid
       if player != null and player != hex.owner
         return true
     return false
-  
+
   getRandomStartingHex: () ->
     hex = null
     #TODO: Hacky way to give any random hex to player if there are no hexs w/o neighbors
@@ -68,7 +68,7 @@ class HexGrid
       if i > 100
         break
     return hex
-    
+
 class HexProtocol
 
   @CHANNEL = 'hex'
@@ -108,7 +108,7 @@ class HexProtocol
   sync: (steps) ->
     @send('sync', [steps, @actions])
     @actions = []
-	
+
   # sever -> client: let other clients know of new player
   playerJoined: (name, id, color) ->
     @send('playerJoined', [name, id, color]);
@@ -165,7 +165,7 @@ class HexCore
       return false
     @currentStep += steps
     return true
-    
+
   updateHex: (hex, player) ->
     if hex.owner?
       hex.owner.removeHex(hex)

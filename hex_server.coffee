@@ -1,3 +1,4 @@
+HexVersion = require('./hex_version.js').HexVersion
 HexCore = require('./hex_core.js').HexCore
 HexPlayer = require('./hex_core.js').HexPlayer
 HexProtocol = require('./hex_core.js').HexProtocol
@@ -50,7 +51,7 @@ class HexServer extends HexCore
     #give hex to player
     hex = @grid.getRandomStartingHex()
     player = new HexPlayer(playerName, null, null, protocol)
-    @players[player.id] = player 
+    @players[player.id] = player
     action = ['hex', player.id, hex.x, hex.y]
     @actions.push(action)
     protocol.actions.push(action)
