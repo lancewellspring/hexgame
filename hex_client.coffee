@@ -52,7 +52,9 @@ class HexClient extends HexCore
         visible.push(myhex)
         for h in @grid.getAdjacentHexs(myhex)
           visible.push(h)
-      for h in @grid.getAdjacentHexs(hex)
+      check = @grid.getAdjacentHexs(hex)
+      check.push(hex)
+      for h in check
         if not (h in visible)
           index = @cells.indexOf(h)
           @cells.splice(index, 1)
@@ -62,6 +64,9 @@ class HexClient extends HexCore
       
   sendAttack: (x, y) =>
     @protocol.attack([@thisPlayer.id, x, y])
+    
+  sendChat: (msg) ->
+    @protocol.chat(msg)
     
   _playerJoined: (name, id, color) ->
     console.log("playerJoined: #{name} #{id}")

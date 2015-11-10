@@ -244,7 +244,7 @@
         // send chat messages to the server
         $("#textbox2").keyup(function(e) {
           if(e.keyCode == 13) {
-            protocol.chat($("#textbox2").val());
+            hexclient.sendChat($("#textbox2").val())
             $("#textbox2").val('');
           }
         });

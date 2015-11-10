@@ -75,8 +75,9 @@ class HexRenderer
     
   removeHex: (hex) ->
     key = "#{hex.x}#{hex.y}"
-    @stage.removeChild(@hexSprites[key].sprite)
-    delete @hexSprites[key]
+    if key of @hexSprites
+      @stage.removeChild(@hexSprites[key].sprite)
+      delete @hexSprites[key]
     
   update: (steps, cells) ->
     for cell in cells
