@@ -143,8 +143,8 @@ class HexPlayer
     # start with lighter and darker colors
     [lights, darks] = [randColor(0x90, 0xe0), randColor(0x10, 0x70)]
     # avoid shades of grey by mixing light and dark channels
-    channel = 0xff << (Math.floor(Math.random() * 3) * 8)
-    inverter = Math.floor(Math.random() * 2) - 1
+    channel = 0xff << (rand(0, 3) * 8)
+    inverter = rand(-1, 1)
     mask = channel ^ inverter
     # mix the channels with a vector mask (SIMD ftw)
     return (lights & mask) | (darks & ~mask)
