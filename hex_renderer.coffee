@@ -1,17 +1,33 @@
 class HexSprite
 
-  constructor: (@cell, texture, x, y, width, height) ->
+  constructor: (@cell, texture, x, y, stage) ->
     @sprite = new PIXI.Sprite(texture)
-    @sprite.width = width
-    @sprite.height = height
-    @sprite.pivot.set(width / 2, height / 2)
+    @sprite.pivot.set(@sprite.width / 2, @sprite.height / 2)
     @sprite.position.set(x, y)
     @sprite.interactive = true
     @sprite.gridx = @cell.x
     @sprite.gridy = @cell.y
-
+    @sprite.overTint = 0x000000
+    stage.addChild(@sprite)
+    
+    @unitText = new PIXI.Text('', {fill:0xffffff})
+    @unitText.width = @unitText.width / 1.5
+    @unitText.height = @unitText.height / 1.5
+    @centerUnitText(x, y)
+    stage.addChild(@unitText)
+    @unitTextWidth = @unitText.width
+    
+  centerUnitText: (x, y) ->
+    @unitText.position.x = x - @unitText.width / 2
+    @unitText.position.y = y - @unitText.height / 2
+    
   update: (steps) ->
-    @sprite.tint = @cell.color
+    @sprite.tint = @cell.color | @sprite.overTint
+    if @cell.owner?
+      @unitText.text = @cell.units   
+      if @unitText.width > @unitTextWidth
+        @centerUnitText(@sprite.position.x, @sprite.position.y)
+        @unitTextWidth = @unitText.width
 
 class HexRenderer
 
@@ -49,8 +65,6 @@ class HexRenderer
         graphics.lineTo(x, y)
     graphics.endFill()
     @texture = graphics.generateTexture()
-    @currentWidth = @texture.width
-    @currentHeight = @texture.height
     @hexSprites = {}
 
   resize: (@w, @h) ->
@@ -70,10 +84,10 @@ class HexRenderer
 
   #maps grid x/y to window x/y
   gridToWindow: (cellx, celly) ->
-    x = @windowx + (cellx - @gridx) * @currentWidth
-    y = @windowy + (celly - @gridy) * @currentHeight * 3 / 4
+    x = @windowx + (cellx - @gridx) * @texture.width
+    y = @windowy + (celly - @gridy) * @texture.height * 3 / 4
     if Math.abs(celly) % 2 == 1
-      x += @currentWidth / 2
+      x += @texture.width / 2
     return [x, y]
 
   hexSpriteClick: (x, y) ->
@@ -83,6 +97,7 @@ class HexRenderer
     key = "#{hex.x}|#{hex.y}"
     if key of @hexSprites
       @stage.removeChild(@hexSprites[key].sprite)
+      @stage.removeChild(@hexSprites[key].unitText)
       delete @hexSprites[key]
 
   update: (steps, cells) ->
@@ -96,10 +111,11 @@ class HexRenderer
           @firstSprite = false
         #add new cell to sprite list
         [x, y] = @gridToWindow(cell.x, cell.y)
-        @hexSprites[key] = new HexSprite(cell, @texture, x, y, @currentWidth, @currentHeight)
+        @hexSprites[key] = new HexSprite(cell, @texture, x, y, @stage)
         @hexSprites[key].sprite.click = (e) => @hexSpriteClick(e.target.gridx, e.target.gridy)
         @hexSprites[key].sprite.tap = (e) => @hexSpriteClick(e.target.gridx, e.target.gridy)
-        @stage.addChild(@hexSprites[key].sprite)
+        @hexSprites[key].sprite.mouseover = (e) => e.target.overTint = 0x343434
+        @hexSprites[key].sprite.mouseout = (e) => e.target.overTint = 0
       @hexSprites[key].update(steps)
 
   onMouseDown: () ->
@@ -114,10 +130,8 @@ class HexRenderer
         #update grid to window mapping, so we know where to draw new hexs
         @windowx += difx
         @windowy += dify
-        #update position of all existing hexs
-        for key, hexSprite of @hexSprites
-          hexSprite.sprite.position.x += difx
-          hexSprite.sprite.position.y += dify
+        @stage.position.x += difx
+        @stage.position.y += dify
       @lastDragx = x
       @lastDragy = y
 
@@ -126,18 +140,10 @@ class HexRenderer
     @lastDragx = @lastDragy = -1
 
   onMouseWheel: (delta) ->
-    #delta = Math.abs(e.originalEvent.wheelDelta) / e.originalEvent.wheelDelta
-    if (delta < 0 and @currentWidth < @texture.width / 2) or (delta > 0 and @currentWidth > @texture.width * 2)
+    if @stage.scale.x + delta * .1 < .5 or @stage.scale.y + delta * .1 > 2
       return
-    #update currentWidth so we know how big and where to draw new hexs
-    @currentWidth += delta * 10
-    @currentHeight += delta * 11
-    for key, hexSprite of @hexSprites
-      hexSprite.sprite.width = @currentWidth
-      hexSprite.sprite.height = @currentHeight
-      hexSprite.sprite.pivot.set(@currentWidth / 2, @currentHeight / 2)
-      [x,y] = @gridToWindow(hexSprite.sprite.gridx, hexSprite.sprite.gridy)
-      hexSprite.sprite.position.set(x,y)
+    @stage.scale.x += delta * .1 
+    @stage.scale.y += delta * .1 
 
   autoScroll: () ->
     # fit visible hex to screen

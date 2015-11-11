@@ -4,12 +4,19 @@ class HexCell
     @color = 0xffffff
     @owner = null
     @units = 0
+    @stepCount = 0
 
   update: (steps) ->
+    if @owner?
+      @stepCount += steps
+      if @stepCount > 5000 and @units < 100
+        @units += 1
+        @stepCount = 0
 
   setOwner: (player) ->
     @owner = player
     @color = player.color
+    @stepCount = 0
 
   #TODO: update save/load for new changes
   _save: () ->
@@ -136,7 +143,7 @@ class HexPlayer
   @playerCount = 0
   constructor: (@name, @id, @color, @protocol) ->
     if not @color?
-      @color = Math.floor(Math.random() * (1 << 24)) | 0x282828
+      @color = Math.floor(Math.random() * (1 << 24)) | 0x222222
     if not @id?
       @id = HexPlayer.playerCount++
     @hexs = []
@@ -170,6 +177,8 @@ class HexCore
     if steps == 0
       console.log('lagging')
       return false
+    for k, p of @players
+      p.update(steps)
     @currentStep += steps
     return true
 
