@@ -179,7 +179,6 @@ class HexCore
   update: (steps) ->
     steps = Math.min(steps, @limitStep - @currentStep)
     if steps == 0
-      console.log('lagging')
       return false
     for k, p of @players
       p.update(steps)

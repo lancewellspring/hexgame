@@ -5,8 +5,8 @@ server = require('http').Server(app)
 io = require('socket.io')(server)
 
 # the game
-HexProtocol = require('./public/hex_core.js').HexProtocol
-HexServer = require('./public/hex_server.js').HexServer
+{HexProtocol} = require('./public/hex_core.js')
+{HexServer} = require('./public/hex_server.js')
 hexServer = new HexServer()
 
 # directory for static web content

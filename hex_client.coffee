@@ -1,7 +1,7 @@
-HexVersion = require('./hex_version.js').HexVersion
-HexCore = require('./hex_core.js').HexCore
-HexPlayer = require('./hex_core.js').HexPlayer
-HexProtocol = require('./hex_core.js').HexProtocol
+{HexVersion} = require('./hex_version.js')
+{HexCore} = require('./hex_core.js')
+{HexPlayer} = require('./hex_core.js')
+{HexProtocol} = require('./hex_core.js')
 
 class HexClient extends HexCore
 
@@ -10,7 +10,7 @@ class HexClient extends HexCore
     @thisPlayer = null
     @cells = []
     #setup click callback
-    @renderer.hexSpriteClick = @sendAttack
+    @renderer.hexSpriteClick = (x, y) => @sendAttack(x, y)
 
     @protocol = new HexProtocol(this, (type, data) ->
       socket.emit(HexProtocol.CHANNEL, [type, data])
@@ -64,16 +64,14 @@ class HexClient extends HexCore
       @cells.push(hex)
     @renderer.autoScroll()
 
-  sendAttack: (x, y) =>
+  sendAttack: (x, y) ->
     @protocol.attack([@thisPlayer.id, x, y])
 
   sendChat: (msg) ->
     @protocol.chat(msg)
 
   # TODO: put this utility function somewhere better
-  _cssColor = (x) ->
-    hexByte = (y) -> ('0' + (y & 0xff).toString(16)).slice(-2)
-    return '#' + hexByte(x >> 16) + hexByte(x >> 8) + hexByte(x)
+  _cssColor = (color) -> '#' + ('00000' + color.toString(16)).slice(-6)
 
   _playerJoined: (name, id, color) ->
     console.log("playerJoined: #{name} #{id}")
