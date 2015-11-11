@@ -9,21 +9,14 @@ class HexCell
   update: (steps) ->
     if @owner?
       @stepCount += steps
-      if @stepCount > 5000 and @units < 100
+      if @stepCount >= 5000 and @units < 100
         @units += 1
-        @stepCount = 0
+        @stepCount -= 5000
 
   setOwner: (player) ->
     @owner = player
     @color = player.color
     @stepCount = 0
-
-  #TODO: update save/load for new changes
-  _save: () ->
-    return [@index, @color, @speed, @angle]
-
-  _load: (state) ->
-    [@index, @color, @speed, @angle] = state
 
 
 class HexGrid
@@ -140,10 +133,24 @@ class HexProtocol
     @send('chat', [message])
 
 class HexPlayer
+
   @playerCount = 0
+
+  _getRandomColor = () ->
+    # helpers to build random colors
+    rand = (a, b) -> a + Math.floor(Math.random() * (b - a))
+    randColor = (a, b) -> (rand(a, b) << 16) | (rand(a, b) << 8) | rand(a, b)
+    # start with lighter and darker colors
+    [lights, darks] = [randColor(0x90, 0xe0), randColor(0x10, 0x70)]
+    # avoid shades of grey by mixing light and dark channels
+    channel = 0xff << (Math.floor(Math.random() * 3) * 8)
+    inverter = Math.floor(Math.random() * 2) - 1
+    mask = channel ^ inverter
+    # mix the channels with a vector mask (SIMD ftw)
+    return (lights & mask) | (darks & ~mask)
+
   constructor: (@name, @id, @color, @protocol) ->
-    if not @color?
-      @color = Math.floor(Math.random() * (1 << 24)) | 0x222222
+    @color = @color ? _getRandomColor()
     if not @id?
       @id = HexPlayer.playerCount++
     @hexs = []
@@ -161,9 +168,6 @@ class HexPlayer
     this.hexs.splice(index, 1)
 
 class HexCore
-
-  @setColor: (index, color) -> ['color', [index, color]]
-  @setSpeed: (index, speed) -> ['speed', [index, speed]]
 
   constructor: () ->
     @grid = new HexGrid()
@@ -189,18 +193,6 @@ class HexCore
       hex.setOwner(player)
       player.addHex(hex)
 
-  #TODO: need to update save/load for latest changes
-  _save: () ->
-    console.log('saved state')
-    cellData = (cell._save() for cell in @cells)
-    return [@currentStep, @limitStep, @limitMoves, cellData]
-
-  _load: (protocol, state) ->
-    [@currentStep, @limitStep, @limitMoves, cellData] = state
-    for [cell, data] in _.zip(@cells, cellData)
-      cell._load(data)
-    console.log('loaded state')
-
   #syncs actions of players to eachother (and self)
   _sync: (protocol, steps, actions) ->
     if @limitStep > @currentStep
@@ -211,7 +203,7 @@ class HexCore
       console.log(action)
       [type, playerId, x, y] = action
       hex = @grid.hexs[x][y]
-      player=null
+      player = null
       if playerId?
         #TODO: assert playerId of @players
         player = @players[playerId]
