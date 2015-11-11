@@ -97,6 +97,9 @@ class HexProtocol
       when 'playerJoined'
         [name, id, color] = data
         @handler._playerJoined(name, id, color)
+      when 'playerLeft'
+        [id] = data
+        @handler._playerLeft(id)
       else
         console.log("ignored command [#{type}]")
 
@@ -109,9 +112,13 @@ class HexProtocol
     @send('sync', [steps, @actions])
     @actions = []
 
-  # sever -> client: let other clients know of new player
+  # sever -> client: let other clients know of joining player
   playerJoined: (name, id, color) ->
-    @send('playerJoined', [name, id, color]);
+    @send('playerJoined', [name, id, color])
+
+  # sever -> client: let other clients know of leaving player
+  playerLeft: (id) ->
+    @send('playerLeft', [id])
 
   # client -> server: attempt player start
   playerStart: (@playerName) ->

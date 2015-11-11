@@ -12,7 +12,7 @@ class HexClient extends HexCore
     #setup click callback
     @renderer.hexSpriteClick = @sendAttack
 
-    @protocol = new HexProtocol(this, (type, data) =>
+    @protocol = new HexProtocol(this, (type, data) ->
       socket.emit(HexProtocol.CHANNEL, [type, data])
     )
 
@@ -70,11 +70,32 @@ class HexClient extends HexCore
   sendChat: (msg) ->
     @protocol.chat(msg)
 
+  # TODO: put this utility function somewhere better
+  _cssColor = (x) ->
+    hexByte = (y) -> ('0' + (y & 0xff).toString(16)).slice(-2)
+    return '#' + hexByte(x >> 16) + hexByte(x >> 8) + hexByte(x)
+
   _playerJoined: (name, id, color) ->
     console.log("playerJoined: #{name} #{id}")
     @players[id] = new HexPlayer(name, id, color, null)
     if name == @playerName
       @thisPlayer = @players[id]
+    else
+      if @_print?
+        col = _cssColor(color)
+        @_print("&lt;<span style=\"font-weight: bold;color:#{col}\">#{name}</span> joined the game.&gt;")
+
+  _playerLeft: (id) ->
+    console.log("playerLeft: #{id}")
+    if id not of @players
+      return
+    player = @players[id]
+    delete @players[id]
+    if not player?
+      return
+    if @_print?
+      col = _cssColor(player.color)
+      @_print("&lt;<span style=\"font-weight: bold;color:#{col}\">#{player.name}</span> left the game.&gt;")
 
   # called whenever a chat message is received
   _chat: (protocol, message) ->

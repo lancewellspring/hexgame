@@ -18,7 +18,13 @@ class HexServer extends HexCore
     @actions = []
     # send out subsets of actions to individual players
     for client in @clients
-      client.sync(steps)
+      # TODO: properly fix this error:
+      #   TypeError: Cannot call method 'sync' of undefined
+      #     at HexServer.update (/home/hex/common/app/public/hex_server.js:34:29)
+      #     at null.<anonymous> (/home/hex/common/app/index.js:45:22)
+      #     at wrapper [as _onTimeout] (timers.js:252:14)
+      #     at Timer.listOnTimeout [as ontimeout] (timers.js:110:15)
+      client?.sync(steps)
 
   addClient: (socket) ->
     send = (type, data) -> socket.emit(HexProtocol.CHANNEL, [type, data])
@@ -30,8 +36,13 @@ class HexServer extends HexCore
   removeClient: (protocol) ->
     if protocol in @clients
       @clients.splice(@clients.indexOf(protocol), 1)
-      if protocol.playerName?
-        console.log("#{protocol.playerName} has left the game.")
+      if protocol.player?
+        console.log("#{protocol.player.name} has left the game.")
+        delete @players[protocol.player.id]
+        for id, player of @players
+          player.protocol.playerLeft(protocol.player.id)
+        # TODO: remove this player's hex?
+
     console.log("#{@clients.length} connections")
 
   _load: (protocol, state) ->
@@ -51,6 +62,7 @@ class HexServer extends HexCore
     #give hex to player
     hex = @grid.getRandomStartingHex()
     player = new HexPlayer(playerName, null, null, protocol)
+    protocol.player = player
     @players[player.id] = player
     action = ['hex', player.id, hex.x, hex.y]
     @actions.push(action)
@@ -92,11 +104,11 @@ class HexServer extends HexCore
 
   _chat: (protocol, message) ->
     # ignore spoofed messages
-    if not protocol.playerName?
+    if not protocol.player?
       return
     # message formatting
-    console.log("[chat] #{protocol.playerName}: #{message}")
-    formatted = "<b>#{protocol.playerName}:</b> #{message}"
+    console.log("[chat] #{protocol.player.name}: #{message}")
+    formatted = "<b>#{protocol.player.name}:</b> #{message}"
     # don't queue it with the other actions, relay it to everyone immediately
     for client in @clients
       client.chat(formatted)
