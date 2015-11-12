@@ -17,9 +17,24 @@ class HexCell
     @owner = player
     @color = player.color
     @stepCount = 0
-
+    
+  isAdjacent: (other) ->
+    indices = HexGrid.adjacentIndices
+    if y % 2 == 0
+      indices = indices.concat(HexGrid.evenRowIndices)
+    else
+      indices = indices.concat(HexGrid.oddRowIndices)
+    for i in indices
+      [x, y] = i
+      if @x + x == other.x and @y + y == other.y
+        return true
+    return false
 
 class HexGrid
+
+  @adjacentIndices = [[0, -1], [0, 1], [-1, 0], [1, 0]]
+  @evenRowIndices = [[-1, 1], [-1, -1]]
+  @oddRowIndices = [[1, 1], [1, -1]]
 
   constructor: () ->
     @width = 10
@@ -32,11 +47,11 @@ class HexGrid
 
   getAdjacentHexs: (hex) ->
     neighbors = []
-    indices = [[0, -1], [0, 1], [-1, 0], [1, 0]]
+    indices = HexGrid.adjacentIndices
     if hex.y % 2 == 0
-      indices.push([-1, 1], [-1, -1])
+      indices = indices.concat(HexGrid.evenRowIndices)
     else
-      indices.push([1, 1], [1, -1])
+      indices = indices.concat(HexGrid.oddRowIndices)
     for i in indices
       [x, y] = i
       x += hex.x
@@ -100,6 +115,9 @@ class HexProtocol
       when 'playerLeft'
         [id] = data
         @handler._playerLeft(id)
+      when 'transferUnits'
+        [id, fromx, fromy, tox, toy, units] = data
+        @handler._transferUnits(id, fromx, fromy, tox, toy, units)
       else
         console.log("ignored command [#{type}]")
 
@@ -127,6 +145,9 @@ class HexProtocol
   # client -> server: attempt player attack
   attack: (gameData) ->
     @send('attack', [gameData])
+    
+  transferUnits: (id, fromx, fromy, tox, toy, units) ->
+    @send('transferUnits', [id, fromx, fromy, tox, toy, units])
 
   # bidirectional: broadcast a chat message
   chat: (message) ->
@@ -200,8 +221,9 @@ class HexCore
       console.log("#{@limitActions.length} moves in last #{@currentStep} steps")
     for action in @limitActions
       console.log(action)
-      [type, playerId, x, y] = action
+      [type, playerId, x, y, units] = action
       hex = @grid.hexs[x][y]
+      hex.units = units
       player = null
       if playerId?
         #TODO: assert playerId of @players

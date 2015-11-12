@@ -64,7 +64,7 @@ class HexServer extends HexCore
     player = new HexPlayer(playerName, null, null, protocol)
     protocol.player = player
     @players[player.id] = player
-    action = ['hex', player.id, hex.x, hex.y]
+    action = ['hex', player.id, hex.x, hex.y, 0]
     @actions.push(action)
     protocol.actions.push(action)
     #immediately notify all clients of new player
@@ -73,14 +73,36 @@ class HexServer extends HexCore
     #show adjacent hexs to player
     hexs = @grid.getAdjacentHexs(hex)
     for h in hexs
-      action = ['hex', hex?.owner?.id, h.x, h.y]
+      action = ['hex', h?.owner?.id, h.x, h.y, h.units]
       protocol.actions.push(action)
+      
+  _transferUnits: (id, fromx, fromy, tox, toy, units) ->
+    #update server with actions
+    fromHex = @grid.hexs[fromx][fromy]
+    fromAction = ['hex', id, fromx, fromy, fromHex.units-units]
+    @actions.push(fromAction)
+    toHex = @grid.hexs[tox][toy]
+    toAction = ['hex', id, tox, toy, toHex.units+units]
+    @actions.push(toAction)
+    #update all players that can see the action (including the sending player)
+    for id, p of @players
+      if fromHex in p.hexs
+        p.protocol.actions.push(fromAction)
+      if toHex in p.hexs
+        p.protocol.actions.push(toAction)
+      for h in p.hexs
+        #TODO: there is likely a faster way to do this, not sure if its eating up much cpu tho.
+        adjacent = @grid.getAdjacentHexs(h)
+        if fromHex in adjacent
+          p.protocol.actions.push(fromAction)
+        if toHex in adjacent
+          p.protocol.actions.push(toAction)
 
   _attack: (protocol, gameData) ->
     [playerId, x, y] = gameData
     player = @players[playerId]
     hex = @grid.hexs[x][y]
-    action = ['hex', playerId, hex.x, hex.y]
+    action = ['hex', playerId, hex.x, hex.y, 0]
     @actions.push(action)
     protocol.actions.push(action)
     #show appropriate players the hex change.
@@ -88,19 +110,20 @@ class HexServer extends HexCore
       if id == playerId
         continue
       if hex in p.hexs
-        p.protocol.actions.push(['hex', playerId, hex.x, hex.y])
+        p.protocol.actions.push(['hex', playerId, hex.x, hex.y, 0])
       else
         for h in p.hexs
           #TODO: there is likely a faster way to do this, not sure if its eating up much cpu tho.
           if hex in @grid.getAdjacentHexs(h)
-            p.protocol.actions.push(['hex', playerId, hex.x, hex.y])
+            p.protocol.actions.push(['hex', playerId, hex.x, hex.y, 0])
     #show adjacent hexs to player
     hexs = @grid.getAdjacentHexs(hex)
     for h in hexs
       #TODO: this often sends 'show' for hexs that the player can actually already see, improve performance?
-      action = ['hex', h?.owner?.id, h.x, h.y]
-      @actions.push(action)
-      protocol.actions.push(action)
+      if h.owner != player
+        action = ['hex', h.owner?.id, h.x, h.y, 0]
+        @actions.push(action)
+        protocol.actions.push(action)
 
   _chat: (protocol, message) ->
     # ignore spoofed messages

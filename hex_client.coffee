@@ -8,9 +8,10 @@ class HexClient extends HexCore
   constructor: (@playerName, @renderer, socket) ->
     super()
     @thisPlayer = null
+    @selectedHex = null
     @cells = []
     #setup click callback
-    @renderer.hexSpriteClick = (x, y) => @sendAttack(x, y)
+    @renderer.hexSpriteClick = (hexSprite) => @hexClick(hexSprite)
 
     @protocol = new HexProtocol(this, (type, data) ->
       socket.emit(HexProtocol.CHANNEL, [type, data])
@@ -62,10 +63,29 @@ class HexClient extends HexCore
           @renderer.removeHex(h)
     else if not (hex in @cells)
       @cells.push(hex)
-    @renderer.autoScroll()
 
-  sendAttack: (x, y) ->
-    @protocol.attack([@thisPlayer.id, x, y])
+  hexClick: (hexSprite) ->
+    clickedHex = @grid.hexs[hexSprite.gridx][hexSprite.gridy]
+    if @selectedHex?
+      if @selectedHex == clickedHex
+        @selectedHex = null
+        hexSprite.deselect()
+      #decide whether to change selected hex, move units, or attack
+      else if @selectedHex.owner == @thisPlayer and @selectedHex.isAdjacent(clickedHex)
+        if clickedHex.owner == @thisPlayer
+          @protocol.transferUnits(@thisPlayer.id, @selectedHex.x, @selectedHex.y, clickedHex.x, clickedHex.y, Math.floor(@selectedHex.units/2))
+        else if clickedHex.owner?
+          #attack
+        else
+          @protocol.attack([@thisPlayer.id, hexSprite.gridx, hexSprite.gridy])
+      else
+        @selectedHex = clickedHex
+        @renderer.autoPan(hexSprite.sprite.position.x, hexSprite.sprite.position.y)
+    else
+      @selectedHex = clickedHex
+      hexSprite.select()
+      @renderer.autoPan(hexSprite.sprite.position.x, hexSprite.sprite.position.y)
+    #@protocol.attack([@thisPlayer.id, x, y])
 
   sendChat: (msg) ->
     @protocol.chat(msg)

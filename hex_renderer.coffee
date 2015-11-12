@@ -1,33 +1,51 @@
 class HexSprite
 
-  constructor: (@cell, texture, x, y, stage) ->
+  constructor: (@cell, texture, x, y, stage, click) ->
     @sprite = new PIXI.Sprite(texture)
     @sprite.pivot.set(@sprite.width / 2, @sprite.height / 2)
     @sprite.position.set(x, y)
     @sprite.interactive = true
-    @sprite.gridx = @cell.x
-    @sprite.gridy = @cell.y
-    @sprite.overTint = 0x000000
+    @overTint = 0
+    @sprite.click = (e) => click(this)
+    @sprite.tap = (e) => click(this)
+    @sprite.mouseover = (e) => @overTint |= 0x323232
+    @sprite.mouseout = (e) => 
+      if not @selected
+        @overTint = 0
     stage.addChild(@sprite)
 
     @unitText = new PIXI.Text('', {fill:0xffffff})
     @unitText.width = @unitText.width / 1.5
     @unitText.height = @unitText.height / 1.5
     @centerUnitText(x, y)
+    @unitText.click = (e) => click(this)
+    @unitText.tap = (e) => click(this)
     stage.addChild(@unitText)
+    
+    @gridx = @cell.x
+    @gridy = @cell.y
     @unitTextWidth = @unitText.width
+    @selected = false
 
   centerUnitText: (x, y) ->
     @unitText.position.x = x - @unitText.width / 2
     @unitText.position.y = y - @unitText.height / 2
 
   update: (steps) ->
-    @sprite.tint = @cell.color | @sprite.overTint
+    @sprite.tint = @cell.color | @overTint
     if @cell.owner?
       @unitText.text = @cell.units
       if @unitText.width > @unitTextWidth
         @centerUnitText(@sprite.position.x, @sprite.position.y)
         @unitTextWidth = @unitText.width
+        
+  select: () ->
+    @selected = true
+    @overTint |= 0x323232
+        
+  deselect: () ->
+    @selected = false
+    @overTint = 0
 		
 class Animation
 
@@ -150,11 +168,7 @@ class HexRenderer
           @centerHex = { x: cell.x, y: cell.y }
         #add new cell to sprite list
         [x, y] = @gridToWindow(cell.x, cell.y)
-        @hexSprites[key] = new HexSprite(cell, @texture, x, y, @innerStage)
-        @hexSprites[key].sprite.click = (e) => @hexSpriteClick(e.target.gridx, e.target.gridy)
-        @hexSprites[key].sprite.tap = (e) => @hexSpriteClick(e.target.gridx, e.target.gridy)
-        @hexSprites[key].sprite.mouseover = (e) -> e.target.overTint = 0x343434
-        @hexSprites[key].sprite.mouseout = (e) -> e.target.overTint = 0
+        @hexSprites[key] = new HexSprite(cell, @texture, x, y, @innerStage, @hexSpriteClick)
       @hexSprites[key].update(steps)
     i = 0
     while i < @animations.length
@@ -180,10 +194,6 @@ class HexRenderer
         # @lastDrag = { x: x, y: y }
 
   onMouseUp: (x, y) ->
-    x = @innerStage.x - x + @w/2
-    y = @innerStage.y - y + @h/2
-    dist = Math.sqrt(Math.pow(@innerStage.x-x,2) + Math.pow(@innerStage.x-y,2))
-    @animations.push(new Animation(@innerStage, [{x:x, y:y, steps:dist}]))
     @mouseDown = @dragging = false
     @lastDrag = null
 
@@ -193,9 +203,11 @@ class HexRenderer
       @outerStage.scale.x += ds
       @outerStage.scale.y += ds
 
-  autoScroll: () ->
-    # TODO: fit visible hex to screen
-    #bounds = @outerStage.getBounds()
+  autoPan: (x, y) ->
+    # x = @innerStage.x - x
+    # y = @innerStage.y - y
+    dist = Math.sqrt(Math.pow(@innerStage.x-x,2) + Math.pow(@innerStage.y-y,2))
+    @animations.push(new Animation(@innerStage, [{x:-x, y:-y, steps:dist}]))
 
 
 # public interface
