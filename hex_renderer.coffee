@@ -28,6 +28,41 @@ class HexSprite
       if @unitText.width > @unitTextWidth
         @centerUnitText(@sprite.position.x, @sprite.position.y)
         @unitTextWidth = @unitText.width
+		
+class Animation
+
+  #path should be a list of objects, with the points along the path and how long it takes to get to each of them
+  constructor: (@displayObject, @path) ->
+    @calcNext()
+    @done = false
+    @stepCount = 0
+
+  calcNext: () ->
+    if @path.length > 0
+      @slope = {x:@path[0].x - @displayObject.x, y:@path[0].y - @displayObject.y}
+      # @dist = Math.sqrt(Math.pow(@path[0].x - @displayObject.x, 2) + Math.pow(@path[0].y - @displayObject.y, 2))
+    else
+      @done = true
+
+  update: (steps) ->
+    if not @done
+      @stepCount += steps
+      if @stepCount > @path[0].steps
+        @displayObject.position.x = @path[0].x
+        @displayObject.position.y = @path[0].y
+        steps = @stepCount - @path[0].steps
+        @stepCount -= @path[0].steps
+        @path.pop()
+        @calcNext()
+      if @path.length > 0
+        stepRatio = steps / @path[0].steps
+        xdist = stepRatio * @slope.x
+        ydist = stepRatio * @slope.y
+        # dist = steps / @path[0].steps * @dist
+        # x = Math.sqrt(Math.pow(dist,2)/(Math.pow(@slope,2) + 1))
+        # y = @slope * x
+        @displayObject.position.x += xdist
+        @displayObject.position.y += ydist
 
 class HexRenderer
 
@@ -74,6 +109,7 @@ class HexRenderer
     graphics.endFill()
     @texture = graphics.generateTexture()
     @hexSprites = {}
+    @animations = []
 
   resize: (@w, @h) ->
     @renderer.resize(@w, @h)
@@ -120,23 +156,34 @@ class HexRenderer
         @hexSprites[key].sprite.mouseover = (e) -> e.target.overTint = 0x343434
         @hexSprites[key].sprite.mouseout = (e) -> e.target.overTint = 0
       @hexSprites[key].update(steps)
+    i = 0
+    while i < @animations.length
+      if @animations[i].done
+        @animations.splice(i, 1)
+      else
+        @animations[i].update(steps)
+        i++
 
   onMouseDown: () ->
     @mouseDown = true
 
   onMouseMove: (x, y) ->
-    if @mouseDown
-      @dragging = true
-      if @lastDrag?
-        #update grid to window mapping, so we know where to draw new hexs
-        @innerStage.position.x += (x - @lastDrag.x) / @outerStage.scale.x
-        @innerStage.position.y += (y - @lastDrag.y) / @outerStage.scale.y
-        @lastDrag.x = x
-        @lastDrag.y = y
-      else
-        @lastDrag = { x: x, y: y }
+    # if @mouseDown
+      # @dragging = true
+      # if @lastDrag?
+        ##update grid to window mapping, so we know where to draw new hexs
+        # @innerStage.position.x += (x - @lastDrag.x) / @outerStage.scale.x
+        # @innerStage.position.y += (y - @lastDrag.y) / @outerStage.scale.y
+        # @lastDrag.x = x
+        # @lastDrag.y = y
+      # else
+        # @lastDrag = { x: x, y: y }
 
-  onMouseUp: () ->
+  onMouseUp: (x, y) ->
+    x = @innerStage.x - x + @w/2
+    y = @innerStage.y - y + @h/2
+    dist = Math.sqrt(Math.pow(@innerStage.x-x,2) + Math.pow(@innerStage.x-y,2))
+    @animations.push(new Animation(@innerStage, [{x:x, y:y, steps:dist}]))
     @mouseDown = @dragging = false
     @lastDrag = null
 

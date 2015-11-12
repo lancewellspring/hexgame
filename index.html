@@ -184,7 +184,7 @@
           renderer.onMouseDown();
         }
         var onMouseUp = function(e){
-          renderer.onMouseUp();
+          renderer.onMouseUp(e.clientX, e.clientY);
         }
         var onMouseMove = function(e){
           renderer.onMouseMove(e.clientX, e.clientY);
@@ -212,8 +212,8 @@
 
           for (var i = 0; i < touches.length; i++) {
             if(touches[i].identifier == touch1Idx){
+              renderer.onMouseUp(touches[i].pageX, touches[i].pageY);
               touch1Idx = null;
-              renderer.onMouseUp();
               break;
             }
             else if(touches[i].identifier == touch2Idx){
