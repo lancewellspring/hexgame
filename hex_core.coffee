@@ -7,9 +7,9 @@ class HexCell
     @stepCount = 0
 
   update: (steps) ->
-    if @owner?
+    if @owner? and @units < 100
       @stepCount += steps
-      if @stepCount >= 5000 and @units < 100
+      if @stepCount >= 5000
         @units += 1
         @stepCount -= 5000
 
