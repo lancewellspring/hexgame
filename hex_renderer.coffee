@@ -35,7 +35,7 @@ class HexSprite
     @sprite.tint = @cell.color | @overTint
     if @cell.owner?
       @unitText.text = @cell.units
-      if @unitText.width > @unitTextWidth
+      if @unitText.width != @unitTextWidth
         @centerUnitText(@sprite.position.x, @sprite.position.y)
         @unitTextWidth = @unitText.width
         

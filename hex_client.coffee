@@ -63,29 +63,31 @@ class HexClient extends HexCore
           @renderer.removeHex(h)
     else if not (hex in @cells)
       @cells.push(hex)
+      
+  setSelectedHex: (hex, hexSprite) ->
+    if @selectedHex?
+      @selectedHex.sprite.deselect()
+    @selectedHex = hex
+    @selectedHex.sprite = hexSprite
+    hexSprite.select()
+    @renderer.autoPan(hexSprite.sprite.position.x, hexSprite.sprite.position.y)
 
   hexClick: (hexSprite) ->
     clickedHex = @grid.hexs[hexSprite.gridx][hexSprite.gridy]
     if @selectedHex?
+      #decide whether to change selected hex, move units, or attack
       if @selectedHex == clickedHex
         @selectedHex = null
         hexSprite.deselect()
-      #decide whether to change selected hex, move units, or attack
       else if @selectedHex.owner == @thisPlayer and @selectedHex.isAdjacent(clickedHex)
         if clickedHex.owner == @thisPlayer
           @protocol.transferUnits(@thisPlayer.id, @selectedHex.x, @selectedHex.y, clickedHex.x, clickedHex.y, Math.floor(@selectedHex.units/2))
-        else if clickedHex.owner?
-          #attack
         else
-          @protocol.attack([@thisPlayer.id, hexSprite.gridx, hexSprite.gridy])
+          @protocol.attack([@thisPlayer.id, @selectedHex.x, @selectedHex.y, clickedHex.x, clickedHex.y])
       else
-        @selectedHex = clickedHex
-        @renderer.autoPan(hexSprite.sprite.position.x, hexSprite.sprite.position.y)
+        @setSelectedHex(clickedHex, hexSprite)
     else
-      @selectedHex = clickedHex
-      hexSprite.select()
-      @renderer.autoPan(hexSprite.sprite.position.x, hexSprite.sprite.position.y)
-    #@protocol.attack([@thisPlayer.id, x, y])
+      @setSelectedHex(clickedHex, hexSprite)
 
   sendChat: (msg) ->
     @protocol.chat(msg)

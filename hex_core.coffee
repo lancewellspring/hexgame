@@ -16,11 +16,10 @@ class HexCell
   setOwner: (player) ->
     @owner = player
     @color = player.color
-    @stepCount = 0
     
   isAdjacent: (other) ->
     indices = HexGrid.adjacentIndices
-    if y % 2 == 0
+    if @y % 2 == 0
       indices = indices.concat(HexGrid.evenRowIndices)
     else
       indices = indices.concat(HexGrid.oddRowIndices)
@@ -221,9 +220,10 @@ class HexCore
       console.log("#{@limitActions.length} moves in last #{@currentStep} steps")
     for action in @limitActions
       console.log(action)
-      [type, playerId, x, y, units] = action
+      [type, playerId, x, y, units, stepCount] = action
       hex = @grid.hexs[x][y]
       hex.units = units
+      hex.stepCount = stepCount
       player = null
       if playerId?
         #TODO: assert playerId of @players
