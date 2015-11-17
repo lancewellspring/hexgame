@@ -1,3 +1,7 @@
+class UnitCell
+  #represents a group of units as it travels between hexs
+  constructor: (@owner, @units, @duration) ->
+
 class HexCell
 
   constructor: (@x, @y) ->
@@ -114,9 +118,9 @@ class HexProtocol
       when 'playerLeft'
         [id] = data
         @handler._playerLeft(id)
-      when 'transferUnits'
+      when 'moveUnits'
         [id, fromx, fromy, tox, toy, units] = data
-        @handler._transferUnits(id, fromx, fromy, tox, toy, units)
+        @handler._moveUnits(id, fromx, fromy, tox, toy, units)
       else
         console.log("ignored command [#{type}]")
 
@@ -145,8 +149,9 @@ class HexProtocol
   attack: (gameData) ->
     @send('attack', [gameData])
     
-  transferUnits: (id, fromx, fromy, tox, toy, units) ->
-    @send('transferUnits', [id, fromx, fromy, tox, toy, units])
+  # client -> server: attempt unit move
+  moveUnits: (id, fromx, fromy, tox, toy, units) ->
+    @send('moveUnits', [id, fromx, fromy, tox, toy, units])
 
   # bidirectional: broadcast a chat message
   chat: (message) ->
@@ -231,10 +236,6 @@ class HexCore
       switch type
         when 'hex'
           @updateHex(hex, player)
-        when 'take'
-          console.log("Received old 'take' action")
-        when 'show'
-          console.log("Received old 'show' action")
         else
           console.log("ignored action [#{type}]")
     @currentStep = 0

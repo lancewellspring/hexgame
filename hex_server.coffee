@@ -53,6 +53,15 @@ class HexServer extends HexCore
       console.log('a naughty client just sent the `sync` command')
     else
       super(protocol, steps, actions)
+      
+  showPlayerAdjacentHexs: (player, protocol, hex) ->
+    #TODO: this often sends 'show' for hexs that the player can actually already see, improve performance?
+    hexs = @grid.getAdjacentHexs(hex)
+    for h in hexs
+      if h.owner != player
+        action = ['hex', h?.owner?.id, h.x, h.y, h.units, h.stepCount]
+        #@actions.push(action)
+        protocol.actions.push(action)
 
   _playerStart: (protocol, playerName) ->
     console.log("#{playerName} has joined the game!")
@@ -70,22 +79,10 @@ class HexServer extends HexCore
     #immediately notify all clients of new player
     for client in @clients
       client.playerJoined(playerName, player.id, player.color)
-    #show adjacent hexs to player
-    hexs = @grid.getAdjacentHexs(hex)
-    for h in hexs
-      action = ['hex', h?.owner?.id, h.x, h.y, h.units, h.stepCount]
-      protocol.actions.push(action)
+    @showPlayerAdjacentHexs(player, protocol, hex)
       
-  _transferUnits: (id, fromx, fromy, tox, toy, units) ->
-    #update server with actions
-    fromHex = @grid.hexs[fromx][fromy]
-    fromAction = ['hex', id, fromx, fromy, fromHex.units-units, fromHex.stepCount]
-    @actions.push(fromAction)
-    toHex = @grid.hexs[tox][toy]
-    toAction = ['hex', id, tox, toy, toHex.units+units, toHex.stepCount]
-    @actions.push(toAction)
-    console.log("(#{fromHex.x},#{fromHex.y},#{fromHex.units}) reinforcing (#{toHex.x},#{toHex.y},#{toHex.units})")
-    #update all players that can see the action (including the sending player)
+  #update all players that can see the actions (including the sending player)
+  updatePlayers: (fromHex, toHex, fromAction, toAction) ->
     for id, p of @players
       if fromHex in p.hexs
         p.protocol.actions.push(fromAction)
@@ -98,49 +95,41 @@ class HexServer extends HexCore
           p.protocol.actions.push(fromAction)
         if toHex in adjacent
           p.protocol.actions.push(toAction)
+      
+  #TODO: check if to and from are adjacent, and if so do the current logic for an instant move.  Otherwise, send the fromAction and a new action to kick off the unitSprite move, but set some kind of timer to send an updated toAction when the move should be complete (ie distance * rate).
+  _moveUnits: (id, fromx, fromy, tox, toy, units) ->
+    #update server with actions
+    fromHex = @grid.hexs[fromx][fromy]
+    fromAction = ['hex', id, fromx, fromy, fromHex.units-units, fromHex.stepCount]
+    toHex = @grid.hexs[tox][toy]
+    toAction = ['hex', id, tox, toy, toHex.units+units, toHex.stepCount]
+    @actions.push(fromAction)
+    @actions.push(toAction)
+    console.log("(#{fromHex.x},#{fromHex.y},#{fromHex.units}) reinforcing (#{toHex.x},#{toHex.y},#{toHex.units})")
+    @updatePlayers(fromHex, toHex, fromAction, toAction)
 
   _attack: (protocol, gameData) ->
-    [playerId, fromx, fromy, tox, toy] = gameData
+    [playerId, fromx, fromy, tox, toy, units] = gameData
     player = @players[playerId]
     fromHex = @grid.hexs[fromx][fromy]
     toHex = @grid.hexs[tox][toy]
     fromAction = []
     toAction = []
     success = true
-    console.log("(#{fromHex.x},#{fromHex.y},#{fromHex.units}) attacking (#{toHex.x},#{toHex.y},#{toHex.units})")
-    if fromHex.units > toHex.units
-      halfRemaining = Math.floor((fromHex.units-toHex.units) / 2)
-      fromAction = ['hex', playerId, fromx, fromy, halfRemaining, fromHex.stepCount]
-      toAction = ['hex', playerId, tox, toy, halfRemaining, toHex.stepCount]
+    console.log("(#{fromHex.x},#{fromHex.y},#{units}) attacking (#{toHex.x},#{toHex.y},#{toHex.units})")
+    if units > toHex.units
+      fromAction = ['hex', playerId, fromx, fromy, fromHex.units - units, fromHex.stepCount]
+      toAction = ['hex', playerId, tox, toy, units-toHex.units, toHex.stepCount]
     else
       success = false
-      toRemaining = toHex.units - fromHex.units
-      fromAction = ['hex', playerId, fromx, fromy, 0, fromHex.stepCount]
-      toAction = ['hex', toHex.owner, tox, toy, toRemaining, toHex.stepCount]
+      fromAction = ['hex', playerId, fromx, fromy, fromHex.units - units, fromHex.stepCount]
+      toAction = ['hex', toHex.owner, tox, toy, toHex.units-units, toHex.stepCount]
     @actions.push(fromAction)
     @actions.push(toAction)
-    #update all players that can see the actions (including the sending player)
-    for id, p of @players
-      if fromHex in p.hexs
-        p.protocol.actions.push(fromAction)
-      if toHex in p.hexs
-        p.protocol.actions.push(toAction)
-      for h in p.hexs
-        #TODO: there is likely a faster way to do this, not sure if its eating up much cpu tho.
-        adjacent = @grid.getAdjacentHexs(h)
-        if fromHex in adjacent
-          p.protocol.actions.push(fromAction)
-        if toHex in adjacent
-          p.protocol.actions.push(toAction)
+    @updatePlayers(fromHex, toHex, fromAction, toAction)
     #show adjacent hexs to player
     if success
-      hexs = @grid.getAdjacentHexs(toHex)
-      for h in hexs
-        #TODO: this often sends 'show' for hexs that the player can actually already see, improve performance?
-        if h.owner != player
-          action = ['hex', h.owner?.id, h.x, h.y, h.units, h.stepCount]
-          @actions.push(action)
-          protocol.actions.push(action)
+      @showPlayerAdjacentHexs(player, protocol, toHex)
 
   _chat: (protocol, message) ->
     # ignore spoofed messages
