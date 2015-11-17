@@ -62,6 +62,29 @@ class UnitSprite
     
   destroy: () ->
     @sprite.destroy()
+    
+class HexButton
+
+  constructor: (texture, visible, interactive, position, parent) ->
+    @sprite = new PIXI.Sprite(texture)
+    @sprite.visible = visible
+    @sprite.interactive = interactive
+    @sprite.click = (e) => clickCallback(e)
+    @sprite.tap = (e) => clickCallback(e)
+    x = y = 0    
+    if position == "mid"
+      x = parent.width / 2 - @sprite.width / 2
+      y = parent.height / 2 - @sprite.height / 2
+    else if position == "left"
+      x = @sprite.width / 2
+      y = parent.height / 2 - @sprite.height / 2
+    else if position == "right"
+      x = parent.width / 2 + @sprite.width / 2
+      y = parent.height / 2 - @sprite.height / 2
+    else
+      console.log("unexpected position in HexButton")
+    @sprite.position.set(x, y)
+    parent.addChild(@sprite)
 
 class HexSprite
 
@@ -98,63 +121,31 @@ class HexSprite
     @centerUnitText(x, y)
     @sprite.addChild(@unitText)
     
-    @selectButton = new PIXI.Sprite(HexSprite.selectTexture)
-    @selectButton.visible = false
-    @selectButton.position.set(@sprite.width / 2 - @selectButton.width / 2, @sprite.height / 2 - @selectButton.height / 2)
-    @selectButton.interactive = true
-    @selectButton.click = (e) => 
-      select(this)
-    @selectButton.tap = (e) => 
-      select(this)
-    @sprite.addChild(@selectButton)
+    @selectButton = new HexButton(HexSprite.selectTexture, false, true, "mid", @sprite)
+    @selectButton.sprite.click = @selectButton.sprite.tap =(e) => select(this)
     
-    @cancelButton = new PIXI.Sprite(HexSprite.deselectTexture)
-    @cancelButton.visible = false
-    @cancelButton.position.set(@sprite.width / 2 - @cancelButton.width / 2, @sprite.height / 2 - @cancelButton.height / 2)
-    @cancelButton.interactive = true
-    @cancelButton.click = (e) => 
-      cancel(this)
-    @cancelButton.tap = (e) => 
-      cancel(this)
-    @sprite.addChild(@cancelButton)
+    @cancelButton = new HexButton(HexSprite.deselectTexture, false, true, "mid", @sprite)
+    @cancelButton.sprite.click = @cancelButton.sprite.tap =(e) => cancel(this)
     
-    @raidButton = new PIXI.Sprite(HexSprite.raidTexture)
-    @raidButton.visible = false
-    @raidButton.position.set(@raidButton.width / 2, @sprite.height / 2 - @raidButton.height / 2)
-    @raidButton.interactive = true
-    @raidButton.click = (e) => @setupSlider(@raidButton, raid, -2)
-    @raidButton.tap = (e) => @setupSlider(@raidButton, raid, -2)
-    @sprite.addChild(@raidButton)
+    @raidButton = new HexButton(HexSprite.raidTexture, false, true, "left", @sprite)
+    @raidButton.sprite.click = @raidButton.sprite.tap = (e) => @setupSlider(@raidButton, raid, -2)
     
-    @conquerButton = new PIXI.Sprite(HexSprite.conquerTexture)
-    @conquerButton.visible = false
-    @conquerButton.position.set(@sprite.width / 2 + @conquerButton.width / 2, @sprite.height / 2 - @conquerButton.height / 2)
-    @conquerButton.interactive = true
-    @conquerButton.click = (e) => @setupSlider(@conquerButton, conquer, -1)
-    @conquerButton.tap = (e) => @setupSlider(@conquerButton, conquer, -1)
-    @sprite.addChild(@conquerButton)
+    @conquerButton = new HexButton(HexSprite.conquerTexture, false, true, "right", @sprite)
+    @conquerButton.sprite.click = @conquerButton.sprite.tap = (e) => @setupSlider(@conquerButton, conquer, -1)
     
-    @moveButton = new PIXI.Sprite(HexSprite.moveTexture)
-    @moveButton.visible = false
-    @moveButton.position.set(@moveButton.width / 2, @sprite.height / 2 - @moveButton.height / 2)
-    @moveButton.interactive = true
-    @moveButton.click = (e) => @setupSlider(@moveButton, move, -2)
-    @moveButton.tap = (e) => @setupSlider(@moveButton, move, -2)
-    @sprite.addChild(@moveButton)
+    @moveButton = new HexButton(HexSprite.moveTexture, false, true, "left", @sprite)
+    @moveButton.sprite.click = @moveButton.sprite.tap = (e) => @setupSlider(@moveButton, move, -2)
     
-    @supplyButton = new PIXI.Sprite(HexSprite.supplyTexture)
-    @supplyButton.visible = false
-    @supplyButton.position.set(@sprite.width / 2 + @supplyButton.width / 2, @sprite.height / 2 - @supplyButton.height / 2)
-    @supplyButton.interactive = true
-    @supplyButton.click = (e) => @setupSlider(@supplyButton, supply, -1)
-    @supplyButton.tap = (e) => @setupSlider(@supplyButton, supply, -1)
-    @sprite.addChild(@supplyButton)
+    @supplyButton = new HexButton(HexSprite.supplyTexture, false, true, "right", @sprite)
+    @supplyButton.sprite.click = @supplyButton.sprite.tap = (e) => @setupSlider(@supplyButton, supply, -1)
     
+    #display humber of units
     @slideText = new PIXI.Text('', {fill:0xffffff})
     @slideText.scale.set(.75, .75)
-    @supplyButton.visible = false
+    @slideText.visible = false
     @sprite.addChild(@slideText)
     
+    #used for determining how many units to use for action
     @slider = new PIXI.Sprite(HexSprite.sliderTexture)
     @slider.visible = false
     @slider.interactive = true
@@ -167,18 +158,19 @@ class HexSprite
       top = 0
       bottom = @slider.height
       localy = e.data.getLocalPosition(@slider).y
+      #@sender is set in the showAllied/showEnemy functions
       @slider.value = Math.floor((bottom - localy) / (bottom - top) * @sender.units)
       @slider.value = Math.min(@slider.value, @sender.units)
       @slideText.text = @slider.value
-      #@slideText.position.y = e.data.global.y
     @sprite.addChild(@slider)
     
   setupSlider: (target, action, dif) ->
     @slider.action = action
     @slider.value = .5
-    @slider.position.set(target.position.x + dif * 8, target.position.y - 8)
-    @slideText.position.set(target.position.x, target.position.y + @slider.width / 2 - @slideText.height / 2)
-    target.visible = false
+    #positioning is a bit hacky =/
+    @slider.position.set(target.sprite.position.x + dif * 8, target.sprite.position.y - 8)
+    @slideText.position.set(target.sprite.position.x, target.sprite.position.y + @slider.width / 2 - @slideText.height / 2)
+    target.sprite.visible = false
     @slider.visible = true
     @slideText.visible = true
 
@@ -188,7 +180,7 @@ class HexSprite
     @unitTextWidth = @unitText.width
 
   update: (steps) ->
-    @sprite.tint = @cell.color #| @overTint
+    @sprite.tint = @cell.color
     if @cell.owner?
       @unitText.text = @cell.units
       if @unitText.width != @unitTextWidth
@@ -196,69 +188,63 @@ class HexSprite
         
   select: () ->
     @selected = true
-    @cancelButton.visible = true
-    @selectButton.visible = false
-    @moveButton.visible = false
-    @supplyButton.visible = false
+    @cancelButton.sprite.visible = true
+    @selectButton.sprite.visible = false
+    @moveButton.sprite.visible = false
+    @supplyButton.sprite.visible = false
     @slider.visible = false
     @slideText.visible = false
         
   deselect: () ->
     @selected = false
-    @raidButton.visible = false
-    @conquerButton.visible = false
-    @moveButton.visible = false
-    @supplyButton.visible = false
-    @cancelButton.visible = false
+    @raidButton.sprite.visible = false
+    @conquerButton.sprite.visible = false
+    @moveButton.sprite.visible = false
+    @supplyButton.sprite.visible = false
+    @cancelButton.sprite.visible = false
     @slider.visible = false
     @slideText.visible = false
     if @highlighed
-      @selectButton.visible = true
+      @selectButton.sprite.visible = true
     
   mouseout: (e) ->
-    if not (@selectButton.containsPoint(e.data.global) or
-            @cancelButton.containsPoint(e.data.global) or
-            @raidButton.containsPoint(e.data.global) or
-            @conquerButton.containsPoint(e.data.global) or
-            @moveButton.containsPoint(e.data.global) or
-            @supplyButton.containsPoint(e.data.global))
-      @selectButton.visible = false
-      @raidButton.visible = false
-      @conquerButton.visible = false
-      @moveButton.visible = false
-      @supplyButton.visible = false
-      @slider.visible = false
-      @slideText.visible = false
-      @highlighted = false
+    @selectButton.sprite.visible = false
+    @raidButton.sprite.visible = false
+    @conquerButton.sprite.visible = false
+    @moveButton.sprite.visible = false
+    @supplyButton.sprite.visible = false
+    @slider.visible = false
+    @slideText.visible = false
+    @highlighted = false
       
   cancelAction: () ->
     #hide ui for current action
     
   showSelect: () ->
     if not @selected
-      @selectButton.visible = true
+      @selectButton.sprite.visible = true
     
   showEnemy: (@sender) ->
     if @cell.owner?
-      @raidButton.visible = true
-      @conquerButton.visible = true
+      @raidButton.sprite.visible = true
+      @conquerButton.sprite.visible = true
     else
-      @conquerButton.visible = true
+      @conquerButton.sprite.visible = true
     
   showAllied: (@sender) ->
-    @moveButton.visible = true
-    @supplyButton.visible = true
-    @selectButton.visible = true
+    @moveButton.sprite.visible = true
+    @supplyButton.sprite.visible = true
+    @selectButton.sprite.visible = true
     
   destroy: () ->
     @sprite.destroy()
     @unitText.destroy()
-    @selectButton.destroy()
-    @cancelButton.destroy()
-    @raidButton.destroy()
-    @conquerButton.destroy()
-    @moveButton.destroy()
-    @supplyButton.destroy()
+    @selectButton.sprite.destroy()
+    @cancelButton.sprite.destroy()
+    @raidButton.sprite.destroy()
+    @conquerButton.sprite.destroy()
+    @moveButton.sprite.destroy()
+    @supplyButton.sprite.destroy()
     @slider.destroy()
     @slideText.destroy()
 
