@@ -31,11 +31,18 @@ class HexClient extends HexCore
     @protocol.playerStart(@playerName)
 
   update: (steps) ->
-    if super
+    steps = Math.min(steps, @limitStep - @currentStep)
+    if steps == 0
       return false
     for cell in @cells
       cell.update(steps)
-    return true
+    @currentStep += steps
+  
+    # if super
+      # return false
+    # for cell in @cells
+      # cell.update(steps)
+    # return true
 
   animate: (millis=0) ->
     # request the next frame
