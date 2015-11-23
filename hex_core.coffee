@@ -47,6 +47,7 @@ class HexGrid
       @hexs.push([])
       for j in [0...@height]
         @hexs[i].push(new HexCell(i, j))
+    
 
   getAdjacentHexs: (hex) ->
     neighbors = []
