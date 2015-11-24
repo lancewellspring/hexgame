@@ -108,13 +108,16 @@ class HexServer extends HexCore
     return
       
   #update all players that can see the actions (including the sending player)
-  updatePlayers: (fromHex, toHex, fromAction, toAction) ->
+  updatePlayers: (fromHex, toHex, fromAction, toAction, updateToPlayer=true) ->
     for id, p of @players
       if fromHex in p.hexs
         p.protocol.actions.push(fromAction)
       if toHex in p.hexs
         p.protocol.actions.push(toAction)
       for h in p.hexs
+        #if tohex was taken from toplayer, dont use its adjacent hexs to determine what toplayer can see.
+        if h == toHex and toHex.owner == p and not updateToPlayer
+          continue
         #TODO: there is likely a faster way to do this, not sure if its eating up much cpu tho.
         adjacent = @grid.getAdjacentHexs(h)
         if fromHex in adjacent
@@ -158,7 +161,7 @@ class HexServer extends HexCore
         toAction = ['hex', toHex.owner.id, tox, toy, toHex.units-units, toHex.stepCount]
       @actions.push(fromAction)
       @actions.push(toAction)
-      @updatePlayers(fromHex, toHex, fromAction, toAction)
+      @updatePlayers(fromHex, toHex, fromAction, toAction, not success)
       #show adjacent hexs to player
       if success
         @showPlayerAdjacentHexs(player, protocol, toHex)

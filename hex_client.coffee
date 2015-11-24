@@ -60,14 +60,16 @@ class HexClient extends HexCore
 
   updateHex: (hex, player) ->
     #check if this hex was taken from @thisPlayer.  if so, recalculate the sight of @thisPlayer (after hex is updated with new owner).
-    loseHex = (hex?.owner == @thisPlayer and player != @thisPlayer)
+    loseHex = (hex.owner == @thisPlayer and player != @thisPlayer)
+    console.log("hex owner:#{hex.owner?.name}\ntaking player: #{player?.name}")
     super(hex, player)
     if loseHex
+      console.log("hex owner:#{hex.owner?.name}\ntaking player: #{player?.name}")
       visible = []
       for myhex in @thisPlayer.hexs
         visible.push(myhex)
-        for h in @grid.getAdjacentHexs(myhex)
-          visible.push(h)
+        for adj in @grid.getAdjacentHexs(myhex)
+          visible.push(adj)
       check = @grid.getAdjacentHexs(hex)
       check.push(hex)
       for h in check

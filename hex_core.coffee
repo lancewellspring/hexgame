@@ -191,7 +191,7 @@ class HexPlayer
   removeHex: (hex) ->
     index = @hexs.indexOf(hex)
     #TODO: assert index >= 0
-    this.hexs.splice(index, 1)
+    @hexs.splice(index, 1)
 
 class HexCore
 
