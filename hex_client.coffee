@@ -11,14 +11,9 @@ class HexClient extends HexCore
     @selectedCell = null
     @cells = []
     #setup click callbacks
-    #@renderer.hexSpriteClick = (hexSprite) => @hexClick(hexSprite)
-    @renderer.selectCallback = (hexSprite) => @selectHex(hexSprite)
-    @renderer.highlightCallback = (hexSprite) => @highlightHex(hexSprite)
-    @renderer.cancelCallback = (hexSprite) => @cancelHex(hexSprite)
-    @renderer.raidCallback = (hexSprite, units) => @raidHex(hexSprite, units)
-    @renderer.conquerCallback = (hexSprite, units) => @conquerHex(hexSprite, units)
-    @renderer.moveCallback = (hexSprite, units) => @moveUnits(hexSprite, units)
-    @renderer.supplyCallback = (hexSprite, units) => @supplyHex(hexSprite, units)
+    @renderer.selectHexCallback = (hexSprite) => @selectHex(hexSprite)
+    @renderer.unitsSelectCallback = (hexSprite, units) => @unitsSelect(hexSprite, units)
+    @renderer.unitsCancelCallback = (hexSprite) => @unitsCancel(hexSprite)
 
     @protocol = new HexProtocol(this, (type, data) ->
       socket.emit(HexProtocol.CHANNEL, [type, data])
@@ -38,11 +33,26 @@ class HexClient extends HexCore
       cell.update(steps)
     @currentStep += steps
   
-    # if super
-      # return false
-    # for cell in @cells
-      # cell.update(steps)
-    # return true
+  _sync: (protocol, steps, actions) ->
+    super(protocol, steps, actions)
+    for action in @limitActions
+      console.log(action)
+      [type, id, hexKey, units, stepCount, duration, toHexKey] = action
+      hex = @grid.hexs[hexKey]
+      player = null
+      if id?
+        #TODO: assert id of @players
+        player = @players[id]
+      switch type
+        when 'hex'
+          hex.units = units
+          hex.stepCount = stepCount
+          @updateHex(hex, player)
+        when 'move'
+          @startUnitMove(player, units, duration, hex, @grid.hexs[toHexKey])
+        else
+          console.log("ignored action [#{type}]")
+    @limitActions = actions
 
   animate: (millis=0) ->
     # request the next frame
@@ -79,83 +89,40 @@ class HexClient extends HexCore
           @renderer.removeHex(h)
     else if not (hex in @cells)
       @cells.push(hex)
-      
-  # setSelectedHex: (hex, hexSprite) ->
-    # if @selectedHex?
-      # @selectedHex.sprite.deselect()
-    # @selectedHex = hex
-    # @selectedHex.sprite = hexSprite
-    # hexSprite.select()
-    # @renderer.autoPan(hexSprite.sprite.position.x, hexSprite.sprite.position.y)
     
   selectHex: (hexSprite) ->
-    console.log("select")
-    clickedCell = @grid.hexs[hexSprite.gridx][hexSprite.gridy]
-    if @selectedCell?
-      @selectedCell.sprite.deselect()
-    @selectedCell = clickedCell
-    @selectedCell.sprite = hexSprite
-    hexSprite.select()
-    @renderer.autoPan(hexSprite.sprite.position.x, hexSprite.sprite.position.y)
-    
-  highlightHex: (hexSprite) ->
-    console.log("highlight")
-    highlighedCell = @grid.hexs[hexSprite.gridx][hexSprite.gridy]
-    if @selectedCell == null and highlighedCell.owner == @thisPlayer
-      hexSprite.showSelect()
-    else if @selectedCell == null or highlighedCell == @selectedCell
-      return #do nothing
-    else if highlighedCell.owner == @thisPlayer
-      hexSprite.showAllied(@selectedCell)
-    else if @selectedCell.isAdjacent(highlighedCell)
-      hexSprite.showEnemy(@selectedCell)
-      
-  cancelHex: (hexSprite) ->
-    console.log("cancel")
-    clickedCell = @grid.hexs[hexSprite.gridx][hexSprite.gridy]
+    clickedCell = @grid.hexs[hexSprite.key]
     if clickedCell == @selectedCell
+      @selectedCell.unitsSelected = 0
+      hexSprite.select()
+    else if @selectedCell?.unitsSelected > 0
+      console.log("send units")
+      @protocol.sendUnits(@thisPlayer.id, @selectedCell.key, clickedCell.key, @selectedCell.unitsSelected)
+      @selectedCell.unitsSelected = 0
       @selectedCell = null
-      hexSprite.deselect()
-    else
-      hexSprite.cancelAction()
+    else if clickedCell.owner == @thisPlayer
+      @selectedCell = clickedCell
+      @selectedCell.unitsSelected = 0
+      hexSprite.select()
+      @renderer.autoPan(hexSprite.sprite.position.x, hexSprite.sprite.position.y)
+    
+  unitsSelect: (hexSprite, units) ->
+    clickedCell = @grid.hexs[hexSprite.key]
+    if clickedCell == @selectedCell
+      @selectedCell.unitsSelected = units
+    
+  unitsCancel: (hexSprite) ->
+    @selectedCell.unitsSelected = 0
+    @selectedCell = null
+    clickedCell = @grid.hexs[hexSprite.key]
+    clickedCell.unitsSelected = 0
       
-  raidHex: (hexSprite, units) ->
-    raidedCell = @grid.hexs[hexSprite.gridx][hexSprite.gridy]
-    @cancelHex(@selectedCell.sprite)
-    console.log("raid")
-      
-  conquerHex: (hexSprite, units) ->
-    console.log("conquer")
-    clickedCell = @grid.hexs[hexSprite.gridx][hexSprite.gridy]
-    @protocol.attack([@thisPlayer.id, @selectedCell.x, @selectedCell.y, clickedCell.x, clickedCell.y, units])
-    @cancelHex(@selectedCell.sprite)
-      
-  moveUnits: (hexSprite, units) ->
-    console.log("move")
-    clickedCell = @grid.hexs[hexSprite.gridx][hexSprite.gridy]
-    @protocol.moveUnits(@thisPlayer.id, @selectedCell.x, @selectedCell.y, clickedCell.x, clickedCell.y, units)
-    @cancelHex(@selectedCell.sprite)
-      
-  supplyHex: (hexSprite, units) ->
-    console.log("supply")
-    @cancelHex(@selectedCell.sprite)
-
-  # hexClick: (hexSprite) ->
-    # clickedHex = @grid.hexs[hexSprite.gridx][hexSprite.gridy]
-    # if @selectedHex?
-      ##decide whether to change selected hex, move units, or attack
-      # if @selectedHex == clickedHex
-        # @selectedHex = null
-        # hexSprite.deselect()
-      # else if @selectedHex.owner == @thisPlayer and @selectedHex.isAdjacent(clickedHex)
-        # if clickedHex.owner == @thisPlayer
-          # @protocol.moveUnits(@thisPlayer.id, @selectedHex.x, @selectedHex.y, clickedHex.x, clickedHex.y, Math.floor(@selectedHex.units/2))
-        # else
-          # @protocol.attack([@thisPlayer.id, @selectedHex.x, @selectedHex.y, clickedHex.x, clickedHex.y])
-      # else
-        # @setSelectedHex(clickedHex, hexSprite)
-    # else
-      # @setSelectedHex(clickedHex, hexSprite)
+  startUnitMove: (player, units, duration, fromHex, toHex) ->
+    super(player, units, duration, fromHex, toHex)
+    hexs = []
+    for k in fromHex.hex_linedraw(toHex)
+      hexs.push(@grid.hexs[k])
+    @renderer.startUnitAnimation(player, hexs, units, duration)
 
   sendChat: (msg) ->
     @protocol.chat(msg)

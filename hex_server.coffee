@@ -2,6 +2,7 @@
 {HexCore} = require('./hex_core.js')
 {HexPlayer} = require('./hex_core.js')
 {HexProtocol} = require('./hex_core.js')
+{UnitCell} = require('./hex_core.js')
 
 # the game server code
 class HexServer extends HexCore
@@ -10,15 +11,13 @@ class HexServer extends HexCore
     try
       super()
       @clients = []
-      @actions = []
     catch ex
       console.log(ex.stack)
 
   update: (steps) ->
     try
       super(steps)
-      @_sync(null, steps, @actions)
-      @actions = []
+      @_sync(null, steps, null)
       # send out subsets of actions to individual players
       for client in @clients
         # TODO: properly fix this error:
@@ -28,8 +27,6 @@ class HexServer extends HexCore
         #     at wrapper [as _onTimeout] (timers.js:252:14)
         #     at Timer.listOnTimeout [as ontimeout] (timers.js:110:15)
         client?.sync(steps)
-      if @actions.length > 0
-        console.log("Past clients._sync")
     catch ex
       console.log(ex)
       process.exit(1)
@@ -51,11 +48,13 @@ class HexServer extends HexCore
       if protocol in @clients
         @clients.splice(@clients.indexOf(protocol), 1)
         if protocol.player?
+          #remove this player's hex from server and all other players
+          actions = []
+          for h in protocol.player.hexs
+            action = ['hex', null, h.key, 0, 0]
+            @updatePlayers(h, action)
           console.log("#{protocol.player.name} has left the game.")
           delete @players[protocol.player.id]
-          for id, player of @players
-            player.protocol.playerLeft(protocol.player.id)
-          # TODO: remove this player's hex?
     catch ex
       console.log(ex.stack)
     return
@@ -66,22 +65,17 @@ class HexServer extends HexCore
     console.log('a naughty client just sent the `load` command')
 
   _sync: (protocol, steps, actions) ->
-    try
-      if protocol?
-        console.log('a naughty client just sent the `sync` command')
-      else
-        super(protocol, steps, actions)
-    catch ex
-      console.log(ex.stack)
-    return
+    if protocol?
+      console.log('a naughty client just sent the `sync` command')
+    else
+      super(protocol, steps, actions)
       
   showPlayerAdjacentHexs: (player, protocol, hex) ->
     #TODO: this often sends 'show' for hexs that the player can actually already see, improve performance?
     hexs = @grid.getAdjacentHexs(hex)
     for h in hexs
-      if h.owner != player
-        action = ['hex', h?.owner?.id, h.x, h.y, h.units, h.stepCount]
-        #@actions.push(action)
+      if h? and h.owner != player
+        action = ['hex', h?.owner?.id, h.key, h.units, h.stepCount]
         protocol.actions.push(action)
     return
 
@@ -96,75 +90,97 @@ class HexServer extends HexCore
       player = new HexPlayer(playerName, null, null, protocol)
       protocol.player = player
       @players[player.id] = player
-      action = ['hex', player.id, hex.x, hex.y, 0, 0]
-      @actions.push(action)
+      hex.setOwner(player)
+      player.addHex(hex)
+      action = ['hex', player.id, hex.key, 0, 0]
       protocol.actions.push(action)
       #immediately notify all clients of new player
       for client in @clients
         client.playerJoined(playerName, player.id, player.color)
+        
+      #temporary code to show player all hexs
+      # for k,h of @grid.hexs
+        # if h != hex
+          # action = ['hex', h?.owner?.id, h.key, h.units, h.stepCount]
+          # protocol.actions.push(action)
       @showPlayerAdjacentHexs(player, protocol, hex)
     catch ex
       console.log(ex.stack)
     return
       
   #update all players that can see the actions (including the sending player)
-  updatePlayers: (fromHex, toHex, fromAction, toAction, updateToPlayer=true) ->
+  updatePlayers: (hex, action) ->
     for id, p of @players
-      if fromHex in p.hexs
-        p.protocol.actions.push(fromAction)
-      if toHex in p.hexs
-        p.protocol.actions.push(toAction)
-      for h in p.hexs
-        #if tohex was taken from toplayer, dont use its adjacent hexs to determine what toplayer can see.
-        if h == toHex and toHex.owner == p and not updateToPlayer
-          continue
-        #TODO: there is likely a faster way to do this, not sure if its eating up much cpu tho.
-        adjacent = @grid.getAdjacentHexs(h)
-        if fromHex in adjacent
-          p.protocol.actions.push(fromAction)
-        if toHex in adjacent
-          p.protocol.actions.push(toAction)
+      if hex in p.hexs
+        p.protocol.actions.push(action)
+      else
+        for h in p.hexs
+          #TODO: there is likely a faster way to do this, not sure if its eating up much cpu tho.
+          adjacent = @grid.getAdjacentHexs(h)
+          if hex in adjacent
+            p.protocol.actions.push(action)
+            break
     return
-      
-  #TODO: check if to and from are adjacent, and if so do the current logic for an instant move.  Otherwise, send the fromAction and a new action to kick off the unitSprite move, but set some kind of timer to send an updated toAction when the move should be complete (ie distance * rate).
-  _moveUnits: (id, fromx, fromy, tox, toy, units) ->
+    
+  unitsArrive: (unitCell) =>
     try
-      #update server with actions
-      fromHex = @grid.hexs[fromx][fromy]
-      fromAction = ['hex', id, fromx, fromy, fromHex.units-units, fromHex.stepCount]
-      toHex = @grid.hexs[tox][toy]
-      toAction = ['hex', id, tox, toy, toHex.units+units, toHex.stepCount]
-      @actions.push(fromAction)
-      @actions.push(toAction)
-      console.log("(#{fromHex.x},#{fromHex.y},#{fromHex.units}) reinforcing (#{toHex.x},#{toHex.y},#{toHex.units})")
-      @updatePlayers(fromHex, toHex, fromAction, toAction)
+      console.log("units arrived at " + unitCell.destination.key)
+      super(unitCell)
+      action = []
+      key = unitCell.destination.key
+      hex = @grid.hexs[key]
+      taken = false
+      newUnitCount = 0
+      #decide if the units reinforce or attack, and if attack is successful
+      if unitCell.owner == hex.owner
+        #reinforce
+        newUnitCount = hex.units + unitCell.units
+        hex.units = newUnitCount
+        action = ['hex', unitCell.owner.id, hex.key, newUnitCount, hex.stepCount]
+      else if unitCell.units > hex.units
+        #successful attack
+        taken = true
+        #change owner
+        if hex.owner?
+          hex.own.removeHex(hex)
+        unitCell.owner.addHex(hex)
+        hex.setOwner(unitCell.owner)
+        #change unit count
+        newUnitCount = unitCell.units - hex.units
+        hex.units = newUnitCount
+        action = ['hex', unitCell.owner.id, hex.key, newUnitCount, hex.stepCount]
+      else
+        #unsuccessful attack
+        newUnitCount = hex.units - unitCell.units
+        hex.units = newUnitCount
+        action = ['hex', hex.owner.id, hex.key, newUnitCount, hex.stepCount]
+      @updatePlayers(hex, action)
+      if taken
+        @showPlayerAdjacentHexs(unitCell.owner, unitCell.owner.protocol, hex)
     catch ex
       console.log(ex.stack)
     return
-
-  _attack: (protocol, gameData) ->
+    
+  _sendUnits: (id, fromkey, tokey, units) ->
     try
-      [playerId, fromx, fromy, tox, toy, units] = gameData
-      player = @players[playerId]
-      fromHex = @grid.hexs[fromx][fromy]
-      toHex = @grid.hexs[tox][toy]
-      fromAction = []
-      toAction = []
-      success = true
-      console.log("(#{fromHex.x},#{fromHex.y},#{units}) attacking (#{toHex.x},#{toHex.y},#{toHex.units})")
-      if units > toHex.units
-        fromAction = ['hex', playerId, fromx, fromy, fromHex.units - units, fromHex.stepCount]
-        toAction = ['hex', playerId, tox, toy, units-toHex.units, toHex.stepCount]
-      else
-        success = false
-        fromAction = ['hex', playerId, fromx, fromy, fromHex.units - units, fromHex.stepCount]
-        toAction = ['hex', toHex.owner.id, tox, toy, toHex.units-units, toHex.stepCount]
-      @actions.push(fromAction)
-      @actions.push(toAction)
-      @updatePlayers(fromHex, toHex, fromAction, toAction, not success)
-      #show adjacent hexs to player
-      if success
-        @showPlayerAdjacentHexs(player, protocol, toHex)
+      console.log("moving/attacking " + units + " units to " + tokey + " from " + fromkey + ".")
+      #update server with actions
+      player = @players[id]
+      fromHex = @grid.hexs[fromkey]
+      #TODO: this should fix the negative units problem, but still need to figure out how the client is sending messages that was causing hte negative untis
+      if fromHex.units - units < 0
+        console.log("fromHex only has " + fromHex.units + " units.")
+        return
+      fromHex.units = fromHex.units-units
+      fromAction = ['hex', id, fromHex.key, fromHex.units, fromHex.stepCount]
+      @updatePlayers(fromHex, fromAction)
+      
+      toHex = @grid.hexs[tokey]
+      duration = Math.sqrt(Math.pow(toHex.q - fromHex.q, 2) + Math.pow(toHex.r - fromHex.r, 2)) * 1000
+      moveAction = ['move', player.id, fromHex.key, units, 0, duration, toHex.key]
+      player.protocol.actions.push(moveAction)
+      
+      @startUnitMove(player, units, duration, fromHex, toHex)
     catch ex
       console.log(ex.stack)
     return
