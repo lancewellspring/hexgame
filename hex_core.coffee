@@ -2,7 +2,7 @@ class UnitCell
   #represents a group of units as it travels between hexs
   constructor: (@owner, @units, @duration, @origin, @destination, @arriveCallback) ->
     @arrived = false
-  
+
   update: (steps) ->
     @duration -= steps
     if @duration <= 0 and not @arrived
@@ -11,12 +11,23 @@ class UnitCell
 
 class HexCell
 
-  _directions = [{q:1, r:0, s:-1}, {q:1, r:-1, s:0}, {q:0, r:-1, s:1}, {q:-1, r:0, s:1}, {q:-1, r:1, s:0}, {q:0, r:1, s:-1}]
-  
+  _max_units = 100
+
+  _generation_time = 5000
+
+  _directions = [
+    {q: 1, r: 0, s:-1}
+    {q: 1, r:-1, s: 0}
+    {q: 0, r:-1, s: 1}
+    {q:-1, r: 0, s: 1}
+    {q:-1, r: 1, s: 0}
+    {q: 0, r: 1, s:-1}
+  ]
+
   _length = (h) -> (Math.abs(h.q) + Math.abs(h.r) + Math.abs(h.s)) / 2
-  
+
   _equals = (h1, h2) -> h1.q == h2.q and h1.r == h2.r and h1.s == h2.s
-  
+
   _round = (h) ->
     q = Math.round(h.q)
     r = Math.round(h.r)
@@ -25,13 +36,13 @@ class HexCell
     r_diff = Math.abs(r - h.r)
     s_diff = Math.abs(s - h.s)
     if q_diff > r_diff and q_diff > s_diff
-        q = -r - s
+      q = -r - s
     else if r_diff > s_diff
-        r = -q - s
+      r = -q - s
     else
-        s = -q - r
+      s = -q - r
     return {q:q, r:r, s:s}
-  
+
   _key = (h) -> h.q + "|" + h.r
 
   constructor: (@q, @r, @s=null) ->
@@ -47,37 +58,38 @@ class HexCell
     @stepCount = 0
 
   update: (steps) ->
-    if @owner? and @units < 100
+    if @owner?
       @stepCount += steps
-      if @stepCount >= 5000
-        @units += 1
-        @stepCount -= 5000
+      while @stepCount >= _generation_time
+        if @units < _max_units
+          @units += 1
+        @stepCount -= _generation_time
 
   setOwner: (player) ->
     @owner = player
     @color = if player?.color? then player.color else 0xffffff
-    
+
   #hex_ functions ONLY deal with objects with q/r/s properties, they don't return a HexCell object
   hex_add: (h) ->
     return {q:@q+h.q, r:@r+h.r, s:@s+h.s}
-    
+
   hex_subtract: (h) ->
     return {q:@q-h.q, r:@r-h.r, s:@s-h.s}
-  
+
   #returns true if h is adjacent to this
   hex_adjacent: (h) ->
     for d in _directions
       if _equals(h, @hex_add(d))
         return true
     return false
-    
+
   #returns the distance between this hex and h
   hex_distance: (h) ->
     return _length(@hex_subtract(h))
-    
+
   hex_lerp: (h, t) ->
     return {q:@q + (h.q - @q) * t, r:@r + (h.r - @r) * t, s:@s + (h.s - @s) * t}
-            
+
   #returns a list of keys of the hexs along a line drawn between this and h
   hex_linedraw: (h) ->
     N = @hex_distance(h)
@@ -86,7 +98,7 @@ class HexCell
     for i in [0..N]
       results.push(_key(_round(@hex_lerp(h, step * i))))
     return results;
-    
+
   #returns the keys of all neighbors
   getNeighborKeys: () ->
     r = []
@@ -199,7 +211,7 @@ class HexProtocol
   # client -> server: attempt player start
   playerStart: (@playerName) ->
     @send('playerStart', [@playerName])
-    
+
   # client -> server: attempt unit move
   sendUnits: (id, fromKey, toKey, units) ->
     @send('sendUnits', [id, fromKey, toKey, units])
@@ -207,7 +219,7 @@ class HexProtocol
   # client -> server: attempt player attack
   # attack: (gameData) ->
     # @send('attack', [gameData])
-    
+
   # client -> server: attempt unit move
   # moveUnits: (id, fromx, fromy, tox, toy, units) ->
     # @send('moveUnits', [id, fromx, fromy, tox, toy, units])
@@ -280,13 +292,13 @@ class HexCore
     if player?
       player.addHex(hex)
     hex.setOwner(player)
-      
+
   unitsArrive: (unitCell) =>
     console.log("core untis arrive")
     index = @unitCells.indexOf(unitCell)
     #TODO: assert index >= 0
     @unitCells.splice(index, 1)
-      
+
   startUnitMove: (player, units, duration, fromHex, toHex) ->
     console.log("start move")
     unitCell = new UnitCell(player, units, duration, fromHex, toHex, @unitsArrive)

@@ -30,29 +30,29 @@ class Animation
         ydist = stepRatio * @slope.y
         @displayObject.position.x += xdist
         @displayObject.position.y += ydist
-    
+
 class UnitSlider
   constructor: (@parent) ->
     graphics = new PIXI.Graphics()
     graphics.lineStyle(2, 0xffffff, 1)
     graphics.drawCircle(0, 0, @parent.width / 4)
     texture = graphics.generateTexture()
-    
+
     @sprite = new PIXI.Sprite(texture)
     @sprite.position.set(@parent.width / 2 - @sprite.width / 2, @parent.height / 2 - @sprite.height / 2)
     @sprite.interactive = false
     @sprite.tint = @parent.tint
     @sprite.scale.set(.1, .1)
     @parent.addChild(@sprite)
-    
+
     @done = false
-    
+
   setSize: (size) ->
     @sprite.width = size
     @sprite.height = size
     @sprite.position.x = @parent.width / 2 - @sprite.width / 2
     @sprite.position.y = @parent.height / 2 - @sprite.height / 2
-    
+
   destroy: () ->
     @parent.removeChild(@sprite)
     @sprite.destroy()
@@ -65,12 +65,12 @@ class HexSprite
     @unitSlider = null
     @unitsSelected = 0
     @selected = false
-    
+
     @sprite = new PIXI.Sprite(texture)
     @sprite.pivot.set(@sprite.width / 2, @sprite.height / 2)
     @sprite.position.set(x, y)
     @sprite.interactive = true
-    # @sprite.click = @sprite.tap = (e) => 
+    # @sprite.click = @sprite.tap = (e) =>
       # @selectHexCallback(this)
     @sprite.mousedown = @sprite.touchstart = (e) =>
       if @unitsSelected > 0
@@ -89,7 +89,10 @@ class HexSprite
         @unitText.text = Math.round(dif / (@sprite.width * .5) * @cell.units)
     @sprite.mouseup = @sprite.touchend = @sprite.mouseupoutside = @sprite.touchendoutside = (e) =>
       if @selectPos?
-        @unitsSelected = parseInt(@unitText.text)
+        if @unitSlider == null
+          @unitsSelected = Math.floor(@cell.units / 2)
+        else
+          @unitsSelected = parseInt(@unitText.text)
         if @unitsSelected > 0
           console.log("sending " + @unitsSelected)
           @unitsSelectCallback(this, @unitsSelected)
@@ -105,7 +108,7 @@ class HexSprite
         # @unitSlider?.destroy()
         # @unitSlider = null
         # @selected = false
-        
+
     stage.addChild(@sprite)
 
     @unitText = new PIXI.Text('', {fill:0xffffff})
@@ -113,7 +116,7 @@ class HexSprite
     @unitText.height = @unitText.height / 1.5
     @centerUnitText(x, y)
     @sprite.addChild(@unitText)
-    
+
   select: () ->
     @selected = true
 
@@ -131,13 +134,13 @@ class HexSprite
         @centerUnitText(@sprite.position.x, @sprite.position.y)
     else
       @unitText.text = ''
-    
+
   destroy: () ->
     @sprite.destroy()
     @unitText.destroy()
 
 class UnitSprite
-    
+
   #A circle that represents a group of units as its travelling between hexs.
   constructor: (@stage, player, hexs, units, duration) ->
     graphics = new PIXI.Graphics()
@@ -146,14 +149,14 @@ class UnitSprite
     graphics.drawCircle(0, 0, Math.sqrt(units)*2)
     graphics.endFill()
     texture = graphics.generateTexture()
-    
+
     @sprite = new PIXI.Sprite(texture)
     @sprite.position.set(hexs[0].sprite.position.x - @sprite.width / 2, hexs[0].sprite.position.y - @sprite.height / 2)
     hexs.splice(0,1)
     @sprite.interactive = false
     @sprite.tint = player.color
     @stage.addChild(@sprite)
-    
+
     path = []
     steps = duration / hexs.length
     for h in hexs
@@ -161,9 +164,9 @@ class UnitSprite
       if h?
         path.push({x:h.sprite.position.x - @sprite.width / 2, y:h.sprite.position.y - @sprite.height / 2, steps:steps})
     @animation = new Animation(@sprite, path, @destroy)
-    
+
   update: (steps) ->
-    
+
   destroy: () =>
     @stage.removeChild(@sprite)
     @sprite.destroy()
@@ -229,7 +232,7 @@ class HexRenderer
 
   takeScreenshot: (callback) ->
     @onScreenshot = callback
-    
+
   startUnitAnimation: (player, hexs, units, duration) ->
     hexSprites = []
     for h in hexs
