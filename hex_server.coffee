@@ -51,6 +51,7 @@ class HexServer extends HexCore
           #remove this player's hex from server and all other players
           actions = []
           for h in protocol.player.hexs
+            h.setOwner(null)
             action = ['hex', null, h.key, 0, 0]
             @updatePlayers(h, action)
           console.log("#{protocol.player.name} has left the game.")
@@ -142,7 +143,7 @@ class HexServer extends HexCore
         taken = true
         #change owner
         if hex.owner?
-          hex.own.removeHex(hex)
+          hex.owner.removeHex(hex)
         unitCell.owner.addHex(hex)
         hex.setOwner(unitCell.owner)
         #change unit count

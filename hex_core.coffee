@@ -131,8 +131,8 @@ class HexGrid
     #TODO: Hacky way to give any random hex to player if there are no hexs w/o neighbors
     i = 0
     while not hex? or hex.owner != null or @hasAdjacentPlayers(hex)
-      q = Math.round(Math.random() * @radius)
-      r = Math.round(Math.random() * @radius)
+      q = Math.round(Math.random() * (@radius-1))
+      r = Math.round(Math.random() * (@radius-1))
       hex = @hexs[q + "|" + r]
       i+= 1
       if i > 100
